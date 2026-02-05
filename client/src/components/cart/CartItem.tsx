@@ -5,9 +5,11 @@ import { updateCartItem, removeCartItem } from '../../store/slices/cartSlice'
 
 interface CartItemProps {
   item: CartItemType
+  isSelected: boolean
+  onToggleSelect: () => void
 }
 
-export default function CartItem({ item }: CartItemProps) {
+export default function CartItem({ item, isSelected, onToggleSelect }: CartItemProps) {
   const dispatch = useAppDispatch()
 
   const handleUpdateQuantity = (quantity: number) => {
@@ -20,6 +22,16 @@ export default function CartItem({ item }: CartItemProps) {
 
   return (
     <div className="flex gap-4 py-4 border-b border-warm-200 last:border-0">
+      {/* Checkbox */}
+      <div className="flex items-start pt-2">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={onToggleSelect}
+          className="h-5 w-5 rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+        />
+      </div>
+
       {/* Image */}
       <div className="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-warm-100">
         <img

@@ -16,6 +16,7 @@ import Checkout from './pages/Checkout'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Profile from './pages/Profile'
+import AuthCallback from './pages/AuthCallback'
 import { OrderList, OrderDetail, OrderConfirmation } from './pages/Orders'
 
 // Admin Pages
@@ -99,6 +100,10 @@ function AppContent() {
             <Register />
           </Layout>
         }
+      />
+      <Route
+        path="/auth/callback"
+        element={<AuthCallback />}
       />
       <Route
         path="/profile"

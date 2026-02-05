@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { selectCart, selectSubtotal, selectSessionId, fetchCart } from '../store/slices/cartSlice'
@@ -59,6 +59,7 @@ const loadRazorpayScript = (): Promise<boolean> => {
 
 export default function Checkout() {
   const navigate = useNavigate()
+  const location = useLocation()
   const dispatch = useAppDispatch()
   const cart = useAppSelector(selectCart)
   const subtotal = useAppSelector(selectSubtotal)
@@ -66,6 +67,26 @@ export default function Checkout() {
   const user = useAppSelector(selectUser)
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
   const { addresses, isLoading: addressesLoading, getDefaultAddress } = useAddresses()
+
+  // Get selected items from navigation state (passed from Cart page)
+  const selectedItemsFromCart = (location.state as { selectedItems?: Array<{ id: string; variantId: string; quantity: number }> })?.selectedItems
+
+  // Filter cart items to only include selected ones
+  const itemsToCheckout = useMemo(() => {
+    if (!cart) return []
+    if (!selectedItemsFromCart || selectedItemsFromCart.length === 0) {
+      // If no selection passed, checkout all items (backward compatibility)
+      return cart.items
+    }
+    // Filter cart items to only include selected ones
+    const selectedIds = new Set(selectedItemsFromCart.map(item => item.id))
+    return cart.items.filter(item => selectedIds.has(item.id))
+  }, [cart, selectedItemsFromCart])
+
+  // Calculate subtotal for selected items only
+  const selectedSubtotal = useMemo(() => {
+    return itemsToCheckout.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+  }, [itemsToCheckout])
 
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
@@ -132,15 +153,17 @@ export default function Checkout() {
   }
 
   // Don't show empty cart if order was just placed (prevents flash before redirect)
-  if ((!cart || cart.items.length === 0) && !orderPlaced) {
+  if ((!cart || cart.items.length === 0 || itemsToCheckout.length === 0) && !orderPlaced) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center">
         <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-4">
-          Your Cart is Empty
+          {cart?.items.length === 0 ? 'Your Cart is Empty' : 'No Items Selected'}
         </h1>
-        <p className="text-warm-600 mb-8">Add some candles before checking out.</p>
-        <Link to="/products">
-          <Button size="lg">Start Shopping</Button>
+        <p className="text-warm-600 mb-8">
+          {cart?.items.length === 0 ? 'Add some candles before checking out.' : 'Please select items from your cart to checkout.'}
+        </p>
+        <Link to={cart?.items.length === 0 ? '/products' : '/cart'}>
+          <Button size="lg">{cart?.items.length === 0 ? 'Start Shopping' : 'Go to Cart'}</Button>
         </Link>
       </div>
     )
@@ -169,12 +192,21 @@ export default function Checkout() {
     }
 
     try {
-      // Create Razorpay order
+      // Create payment order (PhonePe or Razorpay)
       const paymentResponse = await api.createPaymentOrder(orderId)
       if (!paymentResponse.success) {
         throw new Error('Failed to create payment order')
       }
 
+      const { provider, redirectUrl } = paymentResponse.data
+
+      // Handle PhonePe redirect
+      if (provider === 'phonepe' && redirectUrl) {
+        window.location.href = redirectUrl
+        return
+      }
+
+      // Handle Razorpay (existing flow)
       const { razorpayOrderId, amount, currency, keyId } = paymentResponse.data
 
       // Open Razorpay checkout
@@ -240,8 +272,8 @@ export default function Checkout() {
 
     try {
       // Use secure checkout endpoint - prices are validated server-side
-      // Send items with variantId and quantity only (NOT prices)
-      const itemsToCheckout = cart.items.map((item) => ({
+      // Send only selected items with variantId and quantity (NOT prices)
+      const checkoutItems = itemsToCheckout.map((item) => ({
         variantId: item.variantId,
         quantity: item.quantity,
       }))
@@ -250,7 +282,7 @@ export default function Checkout() {
         sessionId, // Always send sessionId to find guest carts
         email: isAuthenticated ? undefined : email,
         shippingAddress,
-        items: itemsToCheckout,
+        items: checkoutItems, // Send only selected items for partial checkout
       })
 
       if (response.success) {
@@ -267,8 +299,8 @@ export default function Checkout() {
   }
 
   const shipping = 99
-  const tax = subtotal * 0.18
-  const total = subtotal + shipping + tax
+  const tax = selectedSubtotal * 0.18
+  const total = selectedSubtotal + shipping + tax
 
   const shippingAddresses = addresses.filter((a) => a.type === 'shipping')
 
@@ -478,9 +510,9 @@ export default function Checkout() {
             <div className="bg-white rounded-xl p-6 shadow-soft sticky top-24">
               <h2 className="font-semibold text-warm-900 mb-6">Order Summary</h2>
 
-              {/* Cart Items */}
+              {/* Cart Items - Only Selected */}
               <div className="space-y-4 mb-6">
-                {cart?.items.map((item) => (
+                {itemsToCheckout.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-warm-100">
                       <img
@@ -507,8 +539,8 @@ export default function Checkout() {
               {/* Summary Lines */}
               <div className="space-y-3 border-t border-warm-200 pt-6 mb-6">
                 <div className="flex justify-between text-warm-600">
-                  <span>Subtotal</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>Subtotal ({itemsToCheckout.length} items)</span>
+                  <span>₹{selectedSubtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-warm-600">
                   <span>Shipping</span>

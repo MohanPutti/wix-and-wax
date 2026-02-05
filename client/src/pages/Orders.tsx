@@ -1,10 +1,12 @@
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { useOrders, useOrder, useOrderByNumber } from '../hooks/useOrders'
 import { useAppSelector } from '../store/hooks'
 import { selectIsAuthenticated } from '../store/slices/authSlice'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
+import { useState, useCallback } from 'react'
+import { api } from '../services/api'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
   pending: 'warning',
@@ -111,9 +113,91 @@ export function OrderList() {
 
 export function OrderDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const isSuccess = searchParams.get('success') === 'true'
   const { order, isLoading, error } = useOrder(id || '')
+  const [isInitiatingPayment, setIsInitiatingPayment] = useState(false)
+  const [paymentError, setPaymentError] = useState('')
+
+  const handleCompletePayment = useCallback(async () => {
+    if (!order) return
+
+    setIsInitiatingPayment(true)
+    setPaymentError('')
+
+    try {
+      // Create payment order
+      const paymentResponse = await api.createPaymentOrder(order.id)
+      if (!paymentResponse.success) {
+        throw new Error('Failed to create payment order')
+      }
+
+      const { provider, redirectUrl } = paymentResponse.data
+
+      // Handle PhonePe redirect
+      if (provider === 'phonepe' && redirectUrl) {
+        window.location.href = redirectUrl
+        return
+      }
+
+      // Handle Razorpay (existing flow)
+      const { razorpayOrderId, amount, currency, keyId } = paymentResponse.data
+
+      // Load Razorpay script
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.async = true
+      document.body.appendChild(script)
+
+      script.onload = () => {
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: 'Wix and Wax',
+          description: `Order ${order.orderNumber}`,
+          order_id: razorpayOrderId,
+          handler: async (response: any) => {
+            try {
+              const verifyResponse = await api.verifyPayment({
+                orderId: order.id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpaySignature: response.razorpay_signature,
+              })
+
+              if (verifyResponse.success) {
+                window.location.reload()
+              } else {
+                setPaymentError('Payment verification failed. Please try again.')
+                setIsInitiatingPayment(false)
+              }
+            } catch {
+              setPaymentError('Payment verification failed. Please try again.')
+              setIsInitiatingPayment(false)
+            }
+          },
+          modal: {
+            ondismiss: () => {
+              setIsInitiatingPayment(false)
+            },
+          },
+        }
+
+        const rzp = new (window as any).Razorpay(options)
+        rzp.open()
+      }
+
+      script.onerror = () => {
+        setPaymentError('Failed to load payment gateway. Please try again.')
+        setIsInitiatingPayment(false)
+      }
+    } catch (err) {
+      setPaymentError(err instanceof Error ? err.message : 'Failed to initiate payment')
+      setIsInitiatingPayment(false)
+    }
+  }, [order])
 
   if (isLoading) {
     return (
@@ -226,6 +310,28 @@ export function OrderDetail() {
                 </div>
               </div>
             </div>
+
+            {/* Complete Payment Button for Pending Orders */}
+            {order.paymentStatus === 'pending' && (
+              <div className="mt-6">
+                {paymentError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+                    {paymentError}
+                  </div>
+                )}
+                <Button
+                  size="lg"
+                  className="w-full"
+                  onClick={handleCompletePayment}
+                  isLoading={isInitiatingPayment}
+                >
+                  Complete Payment
+                </Button>
+                <p className="text-xs text-warm-500 text-center mt-2">
+                  Your order is reserved. Complete payment to confirm.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Shipping Address */}

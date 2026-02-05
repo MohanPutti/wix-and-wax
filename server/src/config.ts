@@ -29,4 +29,12 @@ export const config = {
   razorpayKeyId: process.env.RAZORPAY_KEY_ID || '',
   razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET || '',
   razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET || '',
+
+  // PhonePe
+  phonePeMerchantId: process.env.PHONEPE_MERCHANT_ID || '',
+  phonePeSaltKey: process.env.PHONEPE_SALT_KEY || '',
+  phonePeSaltIndex: process.env.PHONEPE_SALT_INDEX || '1',
+  phonePeEnvironment: (process.env.PHONEPE_ENVIRONMENT || 'uat') as 'production' | 'uat',
+  phonePeCallbackUrl: process.env.PHONEPE_CALLBACK_URL || 'http://localhost:3001/api/payments/phonepe/callback',
+  phonePeRedirectUrl: process.env.PHONEPE_REDIRECT_URL || 'http://localhost:5173/payment/status',
 }

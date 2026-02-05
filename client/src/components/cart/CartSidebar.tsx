@@ -152,6 +152,11 @@ export default function CartSidebar() {
                         <p className="text-sm text-warm-500 mb-6">
                           Shipping and taxes calculated at checkout.
                         </p>
+                        <Link to="/cart" onClick={handleClose}>
+                          <Button className="w-full mb-3" size="lg" variant="outline">
+                            View Full Cart
+                          </Button>
+                        </Link>
                         <Link to="/checkout" onClick={handleClose}>
                           <Button className="w-full" size="lg">
                             Checkout

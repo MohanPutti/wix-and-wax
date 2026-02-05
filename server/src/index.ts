@@ -17,6 +17,7 @@ import {
   createUserService,
 } from '../../core/src/index.js'
 import { createRazorpayAdapter } from '../../core/src/modules/payments/adapters/razorpay.js'
+import { createPhonePeAdapter } from '../../core/src/modules/payments/adapters/phonepe.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -80,6 +81,13 @@ const verifyToken = async (token: string) => {
 app.use('/api', setupUserModule({
   prisma,
   jwtSecret: config.jwtSecret,
+  frontendUrl: config.frontendUrl,
+  google: config.googleClientId && config.googleClientSecret ? {
+    clientId: config.googleClientId,
+    clientSecret: config.googleClientSecret,
+    redirectUri: config.googleCallbackUrl,
+    scopes: ['openid', 'email', 'profile'],
+  } : undefined,
 }))
 
 app.use('/api', setupProductModule({
@@ -257,7 +265,7 @@ const optionalAuth = async (req: express.Request, _res: express.Response, next: 
   next()
 }
 
-// Initialize Razorpay adapter if configured
+// Initialize payment adapters
 const razorpay = config.razorpayKeyId && config.razorpayKeySecret
   ? createRazorpayAdapter({
       keyId: config.razorpayKeyId,
@@ -266,9 +274,23 @@ const razorpay = config.razorpayKeyId && config.razorpayKeySecret
     })
   : null
 
-// Create Razorpay order for payment
+const phonepe = config.phonePeMerchantId && config.phonePeSaltKey
+  ? createPhonePeAdapter({
+      merchantId: config.phonePeMerchantId,
+      saltKey: config.phonePeSaltKey,
+      saltIndex: config.phonePeSaltIndex,
+      environment: config.phonePeEnvironment,
+      callbackUrl: config.phonePeCallbackUrl,
+      redirectUrl: config.phonePeRedirectUrl,
+    })
+  : null
+
+// Use PhonePe as primary, fallback to Razorpay
+const paymentAdapter = phonepe || razorpay
+
+// Create payment order (PhonePe or Razorpay)
 app.post('/api/payments/create-order', optionalAuth, async (req, res) => {
-  if (!razorpay) {
+  if (!paymentAdapter) {
     return res.status(503).json({ success: false, error: { code: 'PAYMENT_UNAVAILABLE', message: 'Payment service not configured' } })
   }
 
@@ -289,29 +311,52 @@ app.post('/api/payments/create-order', optionalAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'ALREADY_PAID', message: 'Order is already paid' } })
     }
 
-    // Create Razorpay order
-    const payment = await razorpay.createPayment({
+    // Create payment with adapter (PhonePe or Razorpay)
+    const payment = await paymentAdapter.createPayment({
       orderId: order.orderNumber,
       amount: Number(order.total),
       currency: order.currency,
       metadata: { orderId: order.id },
+      customerEmail: order.email,
     })
 
-    // Store Razorpay order ID for verification
+    // Store payment provider ID for verification
+    const paymentData = phonepe ? {
+      phonePeTransactionId: payment.providerPaymentId,
+      redirectUrl: payment.redirectUrl,
+    } : {
+      razorpayOrderId: payment.orderId,
+    }
+
     await prisma.order.update({
       where: { id: orderId },
-      data: { notes: JSON.stringify({ razorpayOrderId: payment.orderId }) },
+      data: { notes: JSON.stringify(paymentData) },
     })
 
-    res.json({
-      success: true,
-      data: {
-        razorpayOrderId: payment.orderId,
-        amount: payment.amount,
-        currency: payment.currency,
-        keyId: config.razorpayKeyId,
-      },
-    })
+    // Return appropriate response based on adapter
+    if (phonepe) {
+      res.json({
+        success: true,
+        data: {
+          provider: 'phonepe',
+          transactionId: payment.providerPaymentId,
+          redirectUrl: payment.redirectUrl,
+          amount: payment.amount,
+          currency: payment.currency,
+        },
+      })
+    } else {
+      res.json({
+        success: true,
+        data: {
+          provider: 'razorpay',
+          razorpayOrderId: payment.orderId,
+          amount: payment.amount,
+          currency: payment.currency,
+          keyId: config.razorpayKeyId,
+        },
+      })
+    }
   } catch (error) {
     console.error('Payment order creation error:', error)
     res.status(500).json({ success: false, error: { code: 'PAYMENT_ERROR', message: 'Failed to create payment order' } })
@@ -342,13 +387,86 @@ app.post('/api/payments/verify', optionalAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'INVALID_SIGNATURE', message: 'Payment verification failed' } })
     }
 
+    // Get order with items to process cart cleanup
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: true },
+    })
+
+    if (!order) {
+      return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Order not found' } })
+    }
+
+    // Parse cart info from order notes
+    let cartInfo: { cartId?: string; cartItems?: Array<{ cartItemId: string; variantId: string; quantity: number }>; discountIds?: string[] } = {}
+    try {
+      if (order.notes) {
+        cartInfo = JSON.parse(order.notes as string)
+      }
+    } catch (e) {
+      console.error('Failed to parse order notes:', e)
+    }
+
+    // Update stock quantities
+    for (const item of order.items) {
+      await prisma.productVariant.update({
+        where: { id: item.variantId },
+        data: { quantity: { decrement: item.quantity } },
+      })
+    }
+
+    // Increment discount usage
+    if (cartInfo.discountIds && cartInfo.discountIds.length > 0) {
+      for (const discountId of cartInfo.discountIds) {
+        await prisma.discount.update({
+          where: { id: discountId },
+          data: { usedCount: { increment: 1 } },
+        }).catch(() => {
+          // Ignore if discount doesn't exist
+        })
+      }
+    }
+
+    // Remove items from cart (or reduce quantity for partial checkout)
+    if (cartInfo.cartId && cartInfo.cartItems) {
+      for (const item of cartInfo.cartItems) {
+        const cartItem = await prisma.cartItem.findUnique({ where: { id: item.cartItemId } })
+        if (cartItem) {
+          if (item.quantity >= cartItem.quantity) {
+            // Remove entire cart item
+            await prisma.cartItem.delete({ where: { id: item.cartItemId } })
+          } else {
+            // Reduce quantity (partial item checkout)
+            await prisma.cartItem.update({
+              where: { id: item.cartItemId },
+              data: { quantity: cartItem.quantity - item.quantity },
+            })
+          }
+        }
+      }
+
+      // Check if cart is now empty
+      const remainingItems = await prisma.cartItem.count({ where: { cartId: cartInfo.cartId } })
+
+      if (remainingItems === 0) {
+        // Cart is empty - mark as converted
+        await prisma.cart.update({
+          where: { id: cartInfo.cartId },
+          data: { status: 'converted' },
+        })
+        // Also remove any discounts from the cart
+        await prisma.cartDiscount.deleteMany({ where: { cartId: cartInfo.cartId } })
+      }
+    }
+
     // Update order payment status
-    const order = await prisma.order.update({
+    const updatedOrder = await prisma.order.update({
       where: { id: orderId },
       data: {
         paymentStatus: 'paid',
         status: 'confirmed',
         notes: JSON.stringify({
+          ...cartInfo,
           razorpayOrderId,
           razorpayPaymentId,
           paidAt: new Date().toISOString(),
@@ -356,7 +474,7 @@ app.post('/api/payments/verify', optionalAuth, async (req, res) => {
       },
     })
 
-    res.json({ success: true, data: { order } })
+    res.json({ success: true, data: { order: updatedOrder } })
   } catch (error) {
     console.error('Payment verification error:', error)
     res.status(500).json({ success: false, error: { code: 'VERIFICATION_ERROR', message: 'Payment verification failed' } })
@@ -579,52 +697,25 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
       include: { items: true },
     })
 
-    // Update variant stock
-    for (const item of orderItems) {
-      await prisma.productVariant.update({
-        where: { id: item.variantId },
-        data: { quantity: { decrement: item.quantity } },
-      })
+    // NOTE: Stock reduction and cart cleanup moved to payment verification
+    // Items stay in cart until payment succeeds - if payment fails, user can try again
+
+    // Store cart info in order notes for payment verification
+    const orderNotes = {
+      cartId: cart.id,
+      cartItems: orderItems.map(item => ({
+        cartItemId: item.cartItemId,
+        variantId: item.variantId,
+        quantity: item.quantity,
+      })),
+      discountIds: cart.discounts.map(d => d.discount.id),
     }
 
-    // Increment discount usage
-    for (const { discount } of cart.discounts) {
-      await prisma.discount.update({
-        where: { id: discount.id },
-        data: { usedCount: { increment: 1 } },
-      })
-    }
-
-    // Remove checked out items from cart (or reduce quantity for partial checkout)
-    for (const item of orderItems) {
-      const cartItem = cart.items.find(ci => ci.id === item.cartItemId)
-      if (cartItem) {
-        if (item.quantity >= cartItem.quantity) {
-          // Remove entire cart item
-          await prisma.cartItem.delete({ where: { id: item.cartItemId } })
-        } else {
-          // Reduce quantity (partial item checkout)
-          await prisma.cartItem.update({
-            where: { id: item.cartItemId },
-            data: { quantity: cartItem.quantity - item.quantity },
-          })
-        }
-      }
-    }
-
-    // Check if cart is now empty
-    const remainingItems = await prisma.cartItem.count({ where: { cartId: cart.id } })
-
-    if (remainingItems === 0) {
-      // Cart is empty - mark as converted
-      await prisma.cart.update({
-        where: { id: cart.id },
-        data: { status: 'converted' },
-      })
-      // Also remove any discounts from the cart
-      await prisma.cartDiscount.deleteMany({ where: { cartId: cart.id } })
-    }
-    // If items remain, cart stays active for future purchases
+    // Update order with cart reference
+    await prisma.order.update({
+      where: { id: order.id },
+      data: { notes: JSON.stringify(orderNotes) },
+    })
 
     res.json({ success: true, data: order })
   } catch (error) {

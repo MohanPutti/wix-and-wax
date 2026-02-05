@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import { registerUser, selectIsAuthenticated } from '../store/slices/authSlice'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
+import GoogleOAuthButton from '../components/auth/GoogleOAuthButton'
 
 export default function Register() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
+  const [searchParams] = useSearchParams()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -17,6 +19,8 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  const oauthError = searchParams.get('error')
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -71,11 +75,24 @@ export default function Register() {
         </div>
 
         <div className="bg-white rounded-2xl p-8 shadow-soft">
-          {error && (
+          {(error || oauthError) && (
             <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
-              {error}
+              {error || oauthError}
             </div>
           )}
+
+          {/* Google OAuth */}
+          <GoogleOAuthButton text="Sign up with Google" />
+
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-warm-200"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-warm-500">OR</span>
+            </div>
+          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">

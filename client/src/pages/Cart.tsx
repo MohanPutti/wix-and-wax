@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   selectCart,
@@ -9,17 +9,60 @@ import {
 import CartItem from '../components/cart/CartItem'
 import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
-import { useState } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 
 export default function Cart() {
+  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const cart = useAppSelector(selectCart)
   const subtotal = useAppSelector(selectSubtotal)
   const itemCount = useAppSelector(selectItemCount)
 
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())
   const [discountCode, setDiscountCode] = useState('')
   const [discountError, setDiscountError] = useState('')
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
+
+  // Initialize selectedItems when cart loads or changes
+  useEffect(() => {
+    if (cart?.items) {
+      // Select all items by default when cart changes
+      setSelectedItems(new Set(cart.items.map(item => item.id)))
+    }
+  }, [cart?.items.length]) // Only re-run when number of items changes
+
+  // Calculate selected subtotal
+  const selectedSubtotal = useMemo(() => {
+    if (!cart) return 0
+    return cart.items
+      .filter(item => selectedItems.has(item.id))
+      .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
+  }, [cart, selectedItems])
+
+  // Toggle individual item selection
+  const toggleItemSelection = (itemId: string) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId)
+      } else {
+        newSet.add(itemId)
+      }
+      return newSet
+    })
+  }
+
+  // Toggle all items selection
+  const toggleSelectAll = () => {
+    if (!cart) return
+    if (selectedItems.size === cart.items.length) {
+      setSelectedItems(new Set())
+    } else {
+      setSelectedItems(new Set(cart.items.map(item => item.id)))
+    }
+  }
+
+  const selectedCount = selectedItems.size
 
   const handleApplyDiscount = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -60,6 +103,21 @@ export default function Cart() {
     )
   }
 
+  const handleCheckout = () => {
+    if (selectedCount === 0) {
+      return
+    }
+    // Pass selected items to checkout page
+    const selectedItemsData = cart?.items
+      .filter(item => selectedItems.has(item.id))
+      .map(item => ({
+        id: item.id,
+        variantId: item.variantId,
+        quantity: item.quantity
+      }))
+    navigate('/checkout', { state: { selectedItems: selectedItemsData } })
+  }
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-8">
@@ -70,8 +128,31 @@ export default function Cart() {
         {/* Cart Items */}
         <div className="lg:col-span-2">
           <div className="bg-white rounded-xl p-6 shadow-soft">
+            {/* Select All Checkbox */}
+            <div className="flex items-center gap-3 pb-4 mb-4 border-b border-warm-200">
+              <input
+                type="checkbox"
+                checked={selectedItems.size === cart.items.length && cart.items.length > 0}
+                onChange={toggleSelectAll}
+                className="h-5 w-5 rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+              />
+              <label className="text-sm font-medium text-warm-700">
+                Select All ({cart.items.length} items)
+              </label>
+              {selectedCount > 0 && selectedCount < cart.items.length && (
+                <span className="text-sm text-warm-500">
+                  {selectedCount} selected
+                </span>
+              )}
+            </div>
+
             {cart.items.map((item) => (
-              <CartItem key={item.id} item={item} />
+              <CartItem
+                key={item.id}
+                item={item}
+                isSelected={selectedItems.has(item.id)}
+                onToggleSelect={() => toggleItemSelection(item.id)}
+              />
             ))}
           </div>
         </div>
@@ -124,8 +205,8 @@ export default function Cart() {
             {/* Summary Lines */}
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-warm-600">
-                <span>Subtotal</span>
-                <span>₹{subtotal.toFixed(2)}</span>
+                <span>Selected Items ({selectedCount})</span>
+                <span className="font-medium text-warm-900">₹{selectedSubtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-warm-600">
                 <span>Shipping</span>
@@ -137,18 +218,21 @@ export default function Cart() {
               </div>
               <div className="border-t border-warm-200 pt-3">
                 <div className="flex justify-between text-lg font-semibold text-warm-900">
-                  <span>Total</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
+                  <span>Estimated Total</span>
+                  <span>₹{selectedSubtotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Checkout Button */}
-            <Link to="/checkout">
-              <Button size="lg" className="w-full">
-                Proceed to Checkout
-              </Button>
-            </Link>
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleCheckout}
+              disabled={selectedCount === 0}
+            >
+              Proceed to Checkout{selectedCount > 0 && ` (${selectedCount} items)`}
+            </Button>
 
             <Link
               to="/products"

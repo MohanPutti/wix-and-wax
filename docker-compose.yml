@@ -1,0 +1,17 @@
+services:
+  backend:
+    image: wix-and-wax-backend:latest
+    container_name: wix-and-wax-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    env_file:
+      - server/.env.production
+    volumes:
+      - ./uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

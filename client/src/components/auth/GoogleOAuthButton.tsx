@@ -11,7 +11,7 @@ export default function GoogleOAuthButton({
 }: GoogleOAuthButtonProps) {
   const handleGoogleLogin = () => {
     // Redirect to backend OAuth endpoint
-    window.location.href = 'http://localhost:3001/api/auth/google'
+    window.location.href = '/api/auth/google'
   }
 
   return (

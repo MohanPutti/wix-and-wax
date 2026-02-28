@@ -214,7 +214,7 @@ export default function Checkout() {
         key: keyId,
         amount: amount,
         currency: currency,
-        name: 'Wix and Wax',
+        name: 'Wicks and Wax',
         description: `Order ${orderNumber}`,
         order_id: razorpayOrderId,
         handler: async (response: RazorpayResponse) => {
@@ -266,6 +266,11 @@ export default function Checkout() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!cart) return
+
+    if (!shippingAddress.phone?.trim()) {
+      setError('Phone number is required.')
+      return
+    }
 
     setIsSubmitting(true)
     setError('')
@@ -483,10 +488,11 @@ export default function Checkout() {
                   />
                   <div className="col-span-2">
                     <Input
-                      label="Phone (optional)"
+                      label="Phone"
                       type="tel"
                       value={shippingAddress.phone || ''}
                       onChange={(e) => handleAddressChange('phone', e.target.value)}
+                      required
                     />
                   </div>
                 </div>

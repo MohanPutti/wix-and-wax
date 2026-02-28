@@ -1,92 +1,69 @@
-import { Link } from 'react-router-dom'
+const WHATSAPP_URL = 'https://wa.me/918368680057'
 
 export default function Footer() {
   return (
     <footer className="bg-warm-900 text-warm-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Brand */}
-          <div className="col-span-1 md:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
-              <span className="text-2xl">&#x1F56F;</span>
-              <span className="font-serif text-2xl font-semibold text-cream-100">Wix & Wax</span>
-            </div>
-            <p className="text-warm-300 max-w-md">
-              Hand-poured artisan candles made with love. Transform your space with our carefully curated collection of premium scents.
-            </p>
-          </div>
-
-          {/* Shop */}
-          <div>
-            <h3 className="font-semibold text-cream-100 mb-4">Shop</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/products" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  All Candles
-                </Link>
-              </li>
-              <li>
-                <Link to="/products?category=relaxation" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  Relaxation
-                </Link>
-              </li>
-              <li>
-                <Link to="/products?category=gifts" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  Gift Sets
-                </Link>
-              </li>
-              <li>
-                <Link to="/products?category=holiday" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  Seasonal
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="font-semibold text-cream-100 mb-4">Support</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link to="/contact" className="text-warm-300 hover:text-amber-400 transition-colors">
+      {/* Create Something Uniquely Yours */}
+      <div className="border-b border-warm-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid md:grid-cols-2 gap-10 items-center">
+            <div>
+              <h2 className="font-serif text-3xl md:text-4xl font-bold text-cream-100 mb-4">
+                Create Something Uniquely Yours
+              </h2>
+              <p className="text-warm-300 mb-6">
+                Custom fragrances, personalized labels, bulk packaging — we bring your vision to life.
+                Perfect for weddings, corporate events, and special gifting.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Personalize Now
+                </a>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 border border-warm-600 hover:border-amber-400 text-warm-300 hover:text-amber-400 text-sm font-semibold rounded-lg transition-colors"
+                >
+                  Bulk Orders
+                </a>
+                <a
+                  href={WHATSAPP_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 border border-warm-600 hover:border-amber-400 text-warm-300 hover:text-amber-400 text-sm font-semibold rounded-lg transition-colors"
+                >
                   Contact Us
-                </Link>
-              </li>
-              <li>
-                <Link to="/shipping" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  Shipping Info
-                </Link>
-              </li>
-              <li>
-                <Link to="/returns" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  Returns
-                </Link>
-              </li>
-              <li>
-                <Link to="/faq" className="text-warm-300 hover:text-amber-400 transition-colors">
-                  FAQ
-                </Link>
-              </li>
-            </ul>
+                </a>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { icon: '✍️', label: 'Custom Names & Messages' },
+                { icon: '🌺', label: 'Choose Your Fragrance' },
+                { icon: '🎀', label: 'Custom Packaging' },
+                { icon: '📦', label: 'Bulk & Event Orders' },
+              ].map((feat) => (
+                <div key={feat.label} className="bg-warm-800 rounded-xl p-4 flex items-center gap-3">
+                  <span className="text-2xl">{feat.icon}</span>
+                  <p className="text-sm font-medium text-warm-200">{feat.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="border-t border-warm-800 mt-8 pt-8 flex flex-col md:flex-row justify-between items-center">
-          <p className="text-warm-400 text-sm">
-            &copy; {new Date().getFullYear()} Wix & Wax. All rights reserved.
-          </p>
-          <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-warm-400 hover:text-amber-400 transition-colors">
-              Instagram
-            </a>
-            <a href="#" className="text-warm-400 hover:text-amber-400 transition-colors">
-              Pinterest
-            </a>
-            <a href="#" className="text-warm-400 hover:text-amber-400 transition-colors">
-              Facebook
-            </a>
-          </div>
-        </div>
+      {/* Copyright */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <p className="text-warm-500 text-sm text-center">
+          &copy; {new Date().getFullYear()} Wicks and Wax. All rights reserved.
+        </p>
       </div>
     </footer>
   )

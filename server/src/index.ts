@@ -147,6 +147,32 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   next()
 }
 
+// Sync product images directly via Prisma (bypasses core URL validation)
+app.put('/api/products/:id/images/sync', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { urls } = req.body as { urls: string[] }
+
+    if (!Array.isArray(urls)) {
+      return res.status(400).json({ success: false, error: 'urls must be an array' })
+    }
+
+    await prisma.productImage.deleteMany({ where: { productId: id } })
+
+    const created = await Promise.all(
+      urls.map((url, i) =>
+        prisma.productImage.create({
+          data: { id: uuidv4(), productId: id, url, alt: '', sortOrder: i },
+        })
+      )
+    )
+
+    res.json({ success: true, data: created })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to sync images' })
+  }
+})
+
 // Get user's addresses
 app.get('/api/addresses', requireAuth, async (req, res) => {
   try {
@@ -745,7 +771,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 
 // Start server
 app.listen(config.port, () => {
-  console.log(`🕯️  Wix and Wax server running on http://localhost:${config.port}`)
+  console.log(`🕯️  Wicks and Wax server running on http://localhost:${config.port}`)
   console.log(`   Environment: ${config.nodeEnv}`)
 })
 

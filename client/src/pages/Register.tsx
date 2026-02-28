@@ -68,7 +68,7 @@ export default function Register() {
         <div className="text-center mb-8">
           <Link to="/" className="inline-flex items-center space-x-2 mb-4">
             <span className="text-3xl">&#x1F56F;</span>
-            <span className="font-serif text-3xl font-semibold text-warm-900">Wix & Wax</span>
+            <span className="font-serif text-3xl font-semibold text-warm-900">Wicks and Wax</span>
           </Link>
           <h1 className="font-serif text-2xl font-semibold text-warm-900 mb-2">Create Account</h1>
           <p className="text-warm-600">Join our candle-loving community</p>

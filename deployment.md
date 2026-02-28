@@ -94,18 +94,18 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 9. SSL Certificate (needs domain pointed to EC2 IP first)
 ```bash
-# Point DNS A record: yourdomain.com → 13.233.190.247
+# Point DNS A record: wicksandwax.in → 13.233.190.247
 # Then on EC2:
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+sudo certbot --nginx -d wicksandwax.in -d www.wicksandwax.in
 ```
 
 ### 10. Update .env.production for Domain
 After SSL, update these in `/app/wix-and-wax/server/.env.production`:
 ```
-FRONTEND_URL=https://yourdomain.com
-GOOGLE_CALLBACK_URL=https://yourdomain.com/api/auth/google/callback
-PHONEPE_CALLBACK_URL=https://yourdomain.com/api/payments/phonepe/callback
-PHONEPE_REDIRECT_URL=https://yourdomain.com/payment/status
+FRONTEND_URL=https://wicksandwax.in
+GOOGLE_CALLBACK_URL=https://wicksandwax.in/api/auth/google/callback
+PHONEPE_CALLBACK_URL=https://wicksandwax.in/api/payments/phonepe/callback
+PHONEPE_REDIRECT_URL=https://wicksandwax.in/payment/status
 ```
 Then `docker compose restart`.
 

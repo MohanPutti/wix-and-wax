@@ -7,15 +7,16 @@ import Button from '../components/ui/Button'
 export default function Products() {
   const [searchParams, setSearchParams] = useSearchParams()
   const page = parseInt(searchParams.get('page') || '1', 10)
-  const category = searchParams.get('category') || undefined
+  // Support both ?category= (sidebar/shop) and ?occasion= (nav links)
+  const category = searchParams.get('category') || searchParams.get('occasion') || undefined
   const priceRange = searchParams.get('price') || undefined
 
   let minPrice: number | undefined
   let maxPrice: number | undefined
 
   if (priceRange) {
-    if (priceRange === '50+') {
-      minPrice = 50
+    if (priceRange.endsWith('+')) {
+      minPrice = parseInt(priceRange, 10)
     } else {
       const [min, max] = priceRange.split('-').map(Number)
       minPrice = min
@@ -60,7 +61,7 @@ export default function Products() {
         <aside className="lg:w-64 flex-shrink-0">
           <div className="bg-white rounded-xl p-6 shadow-soft sticky top-24">
             <h2 className="font-semibold text-warm-900 mb-4">Filters</h2>
-            <ProductFilters categories={categories} />
+            <ProductFilters />
           </div>
         </aside>
 

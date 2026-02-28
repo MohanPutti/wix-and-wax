@@ -155,7 +155,7 @@ export function OrderDetail() {
           key: keyId,
           amount: amount,
           currency: currency,
-          name: 'Wix and Wax',
+          name: 'Wicks and Wax',
           description: `Order ${order.orderNumber}`,
           order_id: razorpayOrderId,
           handler: async (response: any) => {

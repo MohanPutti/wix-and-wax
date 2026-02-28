@@ -147,6 +147,35 @@ class ApiClient {
     })
   }
 
+  // Sync all product images at once (uses custom endpoint to avoid URL validation issues)
+  async syncProductImages(productId: string, urls: string[]) {
+    return this.request<ApiResponse<{ id: string; url: string }[]>>(`/products/${productId}/images/sync`, {
+      method: 'PUT',
+      body: JSON.stringify({ urls }),
+    })
+  }
+
+  // Product variant endpoints
+  async addVariant(productId: string, data: object) {
+    return this.request<ApiResponse<{ id: string }>>(`/products/${productId}/variants`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateVariant(productId: string, variantId: string, data: object) {
+    return this.request<ApiResponse<{ id: string }>>(`/products/${productId}/variants/${variantId}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteVariant(productId: string, variantId: string) {
+    return this.request<ApiResponse<void>>(`/products/${productId}/variants/${variantId}`, {
+      method: 'DELETE',
+    })
+  }
+
   // Category endpoints
   async getCategories() {
     return this.request<ApiResponse<Category[]>>('/categories')

@@ -1,157 +1,191 @@
 import { Link } from 'react-router-dom'
-import { useProducts, useCategories } from '../hooks/useProducts'
-import ProductGrid from '../components/products/ProductGrid'
+import { useProducts } from '../hooks/useProducts'
+import ProductCard from '../components/products/ProductCard'
 import Button from '../components/ui/Button'
+import Carousel from '../components/ui/Carousel'
+import Spinner from '../components/ui/Spinner'
+
+const SHOP_CATEGORIES = [
+  { label: 'Jar Candles', icon: '🕯️', href: '/products?category=jar-candles', gradient: 'from-amber-200 to-amber-400', image: null },
+  { label: 'Scented Sachets', icon: '🌸', href: '/products?category=scented-sachets', gradient: 'from-rose-200 to-pink-400', image: null },
+  { label: 'Tealights', icon: '✨', href: '/products?category=tealights', gradient: 'from-yellow-200 to-amber-300', image: null },
+  { label: 'Gift Boxes', icon: '🎁', href: '/products?category=gift-boxes', gradient: 'from-emerald-200 to-teal-400', image: null },
+  { label: 'Custom Name Candles', icon: '✍️', href: '/products?category=custom-name-candles', gradient: 'from-purple-200 to-violet-400', image: null },
+  { label: 'New Arrivals', icon: '🆕', href: '/products?sort=newest', gradient: 'from-sky-200 to-blue-400', image: null },
+  { label: 'Bestsellers', icon: '⭐', href: '/products?sort=bestsellers', gradient: 'from-orange-200 to-amber-500', image: null },
+]
+
+const OCCASIONS = [
+  { label: 'Birthdays', icon: '🎂', href: '/products?occasion=birthdays', gradient: 'from-pink-200 to-rose-400', image: null },
+  { label: 'Baby Showers', icon: '👶', href: '/products?occasion=baby-showers', gradient: 'from-sky-200 to-blue-300', image: null },
+  { label: 'Anniversaries', icon: '💑', href: '/products?occasion=anniversaries', gradient: 'from-red-200 to-rose-500', image: null },
+  { label: 'Housewarming', icon: '🏡', href: '/products?occasion=housewarming', gradient: 'from-green-200 to-emerald-400', image: null },
+  { label: 'Festivals', icon: '🪔', href: '/products?occasion=festivals', gradient: 'from-orange-200 to-red-400', image: null },
+  { label: 'Return Favors', icon: '🎀', href: '/products?occasion=return-favors', gradient: 'from-rose-200 to-pink-400', image: null },
+]
+
+const WEDDING_EVENTS = [
+  { label: 'Wedding Favors', icon: '💍', href: '/products?occasion=wedding-favors', gradient: 'from-rose-100 to-pink-300', image: null },
+  { label: 'Mehendi & Haldi', icon: '🌼', href: '/products?occasion=mehendi-haldi', gradient: 'from-yellow-200 to-amber-400', image: null },
+  { label: 'Bridal Shower', icon: '👰', href: '/products?occasion=bridal-shower', gradient: 'from-fuchsia-200 to-pink-400', image: null },
+  { label: 'Save The Date', icon: '📅', href: '/products?occasion=save-the-date', gradient: 'from-violet-200 to-purple-400', image: null },
+  { label: 'Luxury Hampers', icon: '🧺', href: '/products?occasion=luxury-hampers', gradient: 'from-amber-200 to-yellow-400', image: null },
+  { label: 'Bulk Event Orders', icon: '📦', href: '/products?occasion=bulk-events', gradient: 'from-slate-200 to-warm-400', image: null },
+]
+
+interface CategoryTileProps {
+  label: string
+  icon: string
+  href: string
+  gradient: string
+  image: string | null
+}
+
+function CategoryTile({ label, icon, href, gradient, image }: CategoryTileProps) {
+  return (
+    <Link
+      to={href}
+      className="group flex-shrink-0 w-52 sm:w-60"
+      style={{ scrollSnapAlign: 'start' }}
+    >
+      <div className="bg-white rounded-2xl overflow-hidden shadow-soft hover:shadow-warm hover:-translate-y-1 transition-all duration-300">
+        {/* Image / placeholder area */}
+        <div className={`relative h-64 sm:h-72 bg-gradient-to-br ${gradient} flex items-center justify-center overflow-hidden`}>
+          {image ? (
+            <img src={image} alt={label} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          ) : (
+            <>
+              {/* decorative blobs */}
+              <div className="absolute -bottom-6 -right-6 w-28 h-28 rounded-full bg-white/20" />
+              <div className="absolute -top-4 -left-4 w-20 h-20 rounded-full bg-white/15" />
+              <span className="relative text-7xl drop-shadow-sm">{icon}</span>
+            </>
+          )}
+        </div>
+        {/* Label */}
+        <div className="px-4 py-3 text-center">
+          <p className="font-semibold text-warm-900 group-hover:text-amber-700 transition-colors text-sm leading-snug">
+            {label}
+          </p>
+        </div>
+      </div>
+    </Link>
+  )
+}
+
+function SectionHeader({
+  title,
+  subtitle,
+  viewAllHref,
+}: {
+  title: string
+  subtitle?: string
+  viewAllHref?: string
+}) {
+  return (
+    <div className="flex items-end justify-between mb-8">
+      <div>
+        <h2 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">{title}</h2>
+        {subtitle && <p className="text-warm-500 mt-1 text-sm">{subtitle}</p>}
+      </div>
+      {viewAllHref && (
+        <Link
+          to={viewAllHref}
+          className="text-sm font-medium text-amber-600 hover:text-amber-800 transition-colors whitespace-nowrap ml-4"
+        >
+          View all →
+        </Link>
+      )}
+    </div>
+  )
+}
 
 export default function Home() {
-  const { products, isLoading } = useProducts({ limit: 8, status: 'active' })
-  const { categories } = useCategories()
+  const { products, isLoading } = useProducts({ limit: 12, status: 'active' })
 
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative bg-warm-900 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-r from-warm-900 via-warm-800 to-amber-900 opacity-90" />
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32">
-          <div className="max-w-2xl">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
-              Illuminate Your Space with
-              <span className="text-amber-400"> Artisan Candles</span>
-            </h1>
-            <p className="text-lg text-warm-200 mb-8">
-              Hand-poured with love, our premium candles transform any moment into something special.
-              Discover scents crafted for relaxation, celebration, and everything in between.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Link to="/products">
-                <Button size="lg" className="w-full sm:w-auto">
-                  Shop Collection
-                </Button>
-              </Link>
-              <Link to="/products?category=gifts">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-white/10">
-                  Gift Sets
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-        {/* Decorative Element */}
-        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1/3 h-full opacity-20">
-          <div className="w-full h-full bg-gradient-to-l from-amber-500 to-transparent" />
-        </div>
+      {/* Hero Section — full image, no cropping */}
+      <section className="w-full">
+        <img
+          src="/hero-banner.png"
+          alt="Wicks and Wax"
+          className="w-full h-auto block"
+        />
       </section>
 
-      {/* Categories Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="text-center mb-12">
-          <h2 className="font-serif text-3xl font-semibold text-warm-900 mb-4">
-            Shop by Occasion
-          </h2>
-          <p className="text-warm-600 max-w-2xl mx-auto">
-            Find the perfect candle for every moment
-          </p>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {categories.map((category) => (
-            <Link
-              key={category.id}
-              to={`/products?category=${category.slug}`}
-              className="group bg-white rounded-xl p-6 text-center shadow-soft hover:shadow-warm transition-all duration-300"
-            >
-              <div className="w-16 h-16 mx-auto mb-4 bg-amber-100 rounded-full flex items-center justify-center group-hover:bg-amber-200 transition-colors">
-                <span className="text-2xl">&#x1F56F;</span>
-              </div>
-              <h3 className="font-medium text-warm-900 group-hover:text-amber-700 transition-colors">
-                {category.name}
-              </h3>
-            </Link>
+      {/* Shop by Category Carousel */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-14">
+        <SectionHeader
+          title="Shop by Product"
+          subtitle="Explore our full candle collection"
+          viewAllHref="/products"
+        />
+        <Carousel itemWidth={256}>
+          {SHOP_CATEGORIES.map((cat) => (
+            <CategoryTile key={cat.label} {...cat} />
           ))}
+        </Carousel>
+      </section>
+
+      {/* Occasions Carousel */}
+      <section className="bg-warm-50 py-14">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+          <SectionHeader
+            title="Shop by Occasion"
+            subtitle="Find the perfect candle for every moment"
+            viewAllHref="/products"
+          />
+          <Carousel itemWidth={256}>
+            {OCCASIONS.map((occ) => (
+              <CategoryTile key={occ.label} {...occ} />
+            ))}
+          </Carousel>
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="bg-warm-50 py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center mb-12">
-            <div>
-              <h2 className="font-serif text-3xl font-semibold text-warm-900 mb-2">
-                Featured Candles
-              </h2>
-              <p className="text-warm-600">Our most loved scents</p>
+      {/* Wedding & Events Carousel */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-14">
+        <SectionHeader
+          title="Wedding &amp; Events"
+          subtitle="Make every celebration unforgettable"
+          viewAllHref="/products?occasion=wedding-favors"
+        />
+        <Carousel itemWidth={256}>
+          {WEDDING_EVENTS.map((item) => (
+            <CategoryTile key={item.label} {...item} />
+          ))}
+        </Carousel>
+      </section>
+
+      {/* Featured Products Carousel */}
+      <section className="bg-warm-50 py-14">
+        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+          <SectionHeader
+            title="Featured Candles"
+            subtitle="Our most loved scents"
+            viewAllHref="/products"
+          />
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <Spinner size="lg" />
             </div>
-            <Link to="/products">
-              <Button variant="ghost">View All</Button>
-            </Link>
-          </div>
-          <ProductGrid products={products} isLoading={isLoading} />
+          ) : (
+            <Carousel itemWidth={260}>
+              {products.map((product) => (
+                <div
+                  key={product.id}
+                  className="flex-shrink-0 w-52 sm:w-60"
+                  style={{ scrollSnapAlign: 'start' }}
+                >
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </Carousel>
+          )}
         </div>
       </section>
 
-      {/* About Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="font-serif text-3xl font-semibold text-warm-900 mb-6">
-              Crafted with Care
-            </h2>
-            <div className="space-y-4 text-warm-600">
-              <p>
-                At Wix & Wax, every candle tells a story. We believe in the power of scent to transform
-                your space and elevate your mood.
-              </p>
-              <p>
-                Our candles are hand-poured in small batches using premium soy wax and carefully
-                selected fragrance oils. Each one is crafted to burn cleanly and fill your space
-                with beautiful, long-lasting scent.
-              </p>
-              <p>
-                From relaxing lavender to festive winter spice, we have a candle for every moment
-                and every mood.
-              </p>
-            </div>
-            <div className="mt-8 grid grid-cols-3 gap-6">
-              <div>
-                <p className="font-serif text-3xl font-bold text-amber-600">100%</p>
-                <p className="text-sm text-warm-600">Soy Wax</p>
-              </div>
-              <div>
-                <p className="font-serif text-3xl font-bold text-amber-600">40+</p>
-                <p className="text-sm text-warm-600">Hour Burn Time</p>
-              </div>
-              <div>
-                <p className="font-serif text-3xl font-bold text-amber-600">Hand</p>
-                <p className="text-sm text-warm-600">Poured</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-warm-100 rounded-2xl aspect-square flex items-center justify-center">
-            <span className="text-9xl opacity-50">&#x1F56F;</span>
-          </div>
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="bg-amber-600 text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="font-serif text-3xl font-semibold mb-4">
-            Join Our Community
-          </h2>
-          <p className="text-amber-100 mb-8 max-w-2xl mx-auto">
-            Subscribe to receive updates on new arrivals, special offers, and candle care tips.
-          </p>
-          <form className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-4 py-3 rounded-lg text-warm-900 placeholder:text-warm-400 focus:outline-none focus:ring-2 focus:ring-white"
-            />
-            <Button variant="secondary" size="lg">
-              Subscribe
-            </Button>
-          </form>
-        </div>
-      </section>
     </div>
   )
 }

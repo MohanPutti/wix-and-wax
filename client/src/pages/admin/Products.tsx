@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, PlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 import { useProducts, useProduct, useCategories } from '../../hooks/useProducts'
 import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
@@ -8,6 +8,7 @@ import Badge from '../../components/ui/Badge'
 import Spinner from '../../components/ui/Spinner'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
+import ImageUpload from '../../components/admin/ImageUpload'
 import type { ProductVariant } from '../../types'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning'> = {
@@ -102,7 +103,7 @@ export function AdminProductList() {
                     <Badge variant={statusColors[product.status]}>{product.status}</Badge>
                   </td>
                   <td className="px-6 py-4 text-warm-700">
-                    ${defaultVariant ? Number(defaultVariant.price).toFixed(2) : '-'}
+                    ₹{defaultVariant ? Number(defaultVariant.price).toFixed(0) : '-'}
                   </td>
                   <td className="px-6 py-4">
                     <span className={totalStock <= 10 ? 'text-red-600' : 'text-warm-700'}>
@@ -166,6 +167,145 @@ export function AdminProductList() {
   )
 }
 
+const CATEGORY_GROUPS = [
+  {
+    label: 'Shop',
+    slugs: ['jar-candles', 'scented-sachets', 'tealights', 'gift-boxes', 'custom-name-candles'],
+  },
+  {
+    label: 'Occasions',
+    slugs: ['birthdays', 'baby-showers', 'anniversaries', 'housewarming', 'festivals', 'return-favors'],
+  },
+  {
+    label: 'Wedding & Events',
+    slugs: ['wedding-favors', 'mehendi-haldi', 'bridal-shower', 'save-the-date', 'luxury-hampers', 'bulk-events'],
+  },
+  {
+    label: 'Corporate',
+    slugs: ['corporate', 'client-gifts', 'welcome-kits', 'festive-hampers', 'brand-candles'],
+  },
+]
+
+interface CategoryGroupSelectorProps {
+  categories: { id: string; name: string; slug: string }[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+}
+
+function CategoryGroupSelector({ categories, selectedIds, onChange }: CategoryGroupSelectorProps) {
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
+
+  const toggleGroup = (label: string) =>
+    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
+
+  const toggle = (id: string, checked: boolean) => {
+    if (checked) {
+      onChange([...selectedIds, id])
+    } else {
+      onChange(selectedIds.filter((s) => s !== id))
+    }
+  }
+
+  return (
+    <div className="space-y-1 mt-2">
+      {CATEGORY_GROUPS.map((group) => {
+        const groupCats = categories.filter((c) => group.slugs.includes(c.slug))
+        if (groupCats.length === 0) return null
+        const isOpen = !!openGroups[group.label]
+        const selectedCount = groupCats.filter((c) => selectedIds.includes(c.id)).length
+
+        return (
+          <div key={group.label}>
+            <button
+              type="button"
+              onClick={() => toggleGroup(group.label)}
+              className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase text-warm-500 hover:text-warm-800 hover:bg-warm-50 transition-colors"
+            >
+              <span className="flex items-center gap-2">
+                {group.label}
+                {selectedCount > 0 && (
+                  <span className="bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal">
+                    {selectedCount}
+                  </span>
+                )}
+              </span>
+              <ChevronDownIcon
+                className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+
+            {isOpen && (
+              <div className="mt-0.5 ml-2 space-y-0.5">
+                {groupCats.map((cat) => (
+                  <label key={cat.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-warm-50 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(cat.id)}
+                      onChange={(e) => toggle(cat.id, e.target.checked)}
+                      className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-warm-700">{cat.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+const SIZE_DEFS = [
+  { key: 'sm', label: 'Small', weight: '100g', suffix: 'SM' },
+  { key: 'md', label: 'Medium', weight: '200g', suffix: 'MD' },
+  { key: 'lg', label: 'Large', weight: '350g', suffix: 'LG' },
+] as const
+
+type SizeKey = (typeof SIZE_DEFS)[number]['key']
+
+interface SizeEntry {
+  enabled: boolean
+  price: string
+  quantity: string
+  isDefault: boolean
+}
+
+const defaultSizes = (): Record<SizeKey, SizeEntry> => ({
+  sm: { enabled: false, price: '', quantity: '', isDefault: false },
+  md: { enabled: true,  price: '', quantity: '', isDefault: true  },
+  lg: { enabled: false, price: '', quantity: '', isDefault: false },
+})
+
+function sizesToVariants(sizes: Record<SizeKey, SizeEntry>, slug: string) {
+  return SIZE_DEFS.filter((s) => sizes[s.key].enabled).map((s) => ({
+    name: `${s.label} (${s.weight})`,
+    sku: `${slug.toUpperCase().replace(/-/g, '_')}_${s.suffix}`,
+    price: parseFloat(sizes[s.key].price) || 0,
+    quantity: parseInt(sizes[s.key].quantity) || 0,
+    isDefault: sizes[s.key].isDefault,
+    options: { size: s.label, weight: s.weight },
+  }))
+}
+
+function variantsToSizes(variants: ProductVariant[]): Record<SizeKey, SizeEntry> {
+  const sizes = defaultSizes()
+  for (const v of variants) {
+    const match = SIZE_DEFS.find(
+      (s) => v.name.toLowerCase().includes(s.label.toLowerCase()) || v.sku.endsWith(`_${s.suffix}`)
+    )
+    if (match) {
+      sizes[match.key] = {
+        enabled: true,
+        price: String(v.price),
+        quantity: String(v.quantity),
+        isDefault: v.isDefault,
+      }
+    }
+  }
+  return sizes
+}
+
 export function AdminProductForm() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
@@ -182,20 +322,19 @@ export function AdminProductForm() {
   const [description, setDescription] = useState('')
   const [status, setStatus] = useState('draft')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
-  const [variants, setVariants] = useState<Partial<ProductVariant>[]>([
-    { name: 'Default', sku: '', price: 0, quantity: 0, isDefault: true },
-  ])
+  const [images, setImages] = useState<string[]>([])
+  const [sizes, setSizes] = useState<Record<SizeKey, SizeEntry>>(defaultSizes())
 
-  // Load existing product data in edit mode
   useEffect(() => {
     if (isEditMode && product) {
       setName(product.name)
       setSlug(product.slug)
       setDescription(product.description || '')
       setStatus(product.status)
-      setSelectedCategories(product.categories?.map((c) => c.id) || [])
+      setSelectedCategories(product.categories?.map((c) => c.category.id) || [])
+      setImages(product.images?.map((img) => img.url) || [])
       if (product.variants.length > 0) {
-        setVariants(product.variants)
+        setSizes(variantsToSizes(product.variants))
       }
     }
   }, [isEditMode, product])
@@ -205,40 +344,76 @@ export function AdminProductForm() {
     setSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
   }
 
-  const addVariant = () => {
-    setVariants([...variants, { name: '', sku: '', price: 0, quantity: 0, isDefault: false }])
+  const updateSize = (key: SizeKey, field: keyof SizeEntry, value: string | boolean) => {
+    setSizes((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
   }
 
-  const removeVariant = (index: number) => {
-    if (variants.length <= 1) return
-    setVariants(variants.filter((_, i) => i !== index))
-  }
-
-  const updateVariant = (index: number, field: keyof ProductVariant, value: unknown) => {
-    const newVariants = [...variants]
-    newVariants[index] = { ...newVariants[index], [field]: value }
-    setVariants(newVariants)
+  const setDefaultSize = (key: SizeKey) => {
+    setSizes((prev) => {
+      const next = { ...prev }
+      ;(Object.keys(next) as SizeKey[]).forEach((k) => {
+        next[k] = { ...next[k], isDefault: k === key }
+      })
+      return next
+    })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    const enabledSizes = SIZE_DEFS.filter((s) => sizes[s.key].enabled)
+    if (enabledSizes.length === 0) {
+      setError('Please enable at least one size.')
+      return
+    }
+
     setIsSubmitting(true)
     setError('')
 
     try {
-      const productData = {
-        name,
-        slug,
-        description,
-        status: status as 'draft' | 'active' | 'archived',
-        variants: variants as ProductVariant[],
-      }
+      const newVariants = sizesToVariants(sizes, slug)
 
       if (isEditMode && id) {
-        await api.updateProduct(id, productData)
+        // 1. Update basic product fields + categories
+        await api.updateProduct(id, {
+          name,
+          slug,
+          description,
+          status: status as 'draft' | 'active' | 'archived',
+          categoryIds: selectedCategories,
+        } as any)
+
+        // 2. Sync images — replace all in one call
+        await api.syncProductImages(id, images)
+
+        // 3. Sync variants — update existing, add new, delete removed
+        const existingVariants = product?.variants || []
+        for (const v of newVariants) {
+          const existing = existingVariants.find((ev) => ev.sku === v.sku)
+          if (existing) {
+            await api.updateVariant(id, existing.id, { price: v.price, quantity: v.quantity, isDefault: v.isDefault, name: v.name })
+          } else {
+            await api.addVariant(id, v)
+          }
+        }
+        for (const ev of existingVariants) {
+          if (!newVariants.find((v) => v.sku === ev.sku)) {
+            await api.deleteVariant(id, ev.id)
+          }
+        }
       } else {
-        await api.createProduct(productData)
+        // Create: send everything in one request
+        await api.createProduct({
+          name,
+          slug,
+          description,
+          status: status as 'draft' | 'active' | 'archived',
+          variants: newVariants,
+          categoryIds: selectedCategories,
+          images: images.map((url, i) => ({ url, alt: name, sortOrder: i })),
+        } as any)
       }
+
       navigate('/admin/products')
     } catch (err) {
       setError(err instanceof Error ? err.message : `Failed to ${isEditMode ? 'update' : 'create'} product`)
@@ -288,9 +463,7 @@ export function AdminProductForm() {
                   helperText="URL-friendly identifier"
                 />
                 <div>
-                  <label className="block text-sm font-medium text-warm-700 mb-1">
-                    Description
-                  </label>
+                  <label className="block text-sm font-medium text-warm-700 mb-1">Description</label>
                   <textarea
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
@@ -301,57 +474,88 @@ export function AdminProductForm() {
               </div>
             </div>
 
-            {/* Variants */}
+            {/* Photos */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="font-semibold text-warm-900">Variants</h2>
-                <Button type="button" variant="outline" size="sm" onClick={addVariant}>
-                  Add Variant
-                </Button>
-              </div>
-              <div className="space-y-4">
-                {variants.map((variant, index) => (
-                  <div key={index} className="p-4 border border-warm-200 rounded-lg">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <Input
-                        label="Name"
-                        value={variant.name || ''}
-                        onChange={(e) => updateVariant(index, 'name', e.target.value)}
-                        required
-                      />
-                      <Input
-                        label="SKU"
-                        value={variant.sku || ''}
-                        onChange={(e) => updateVariant(index, 'sku', e.target.value)}
-                        required
-                      />
-                      <Input
-                        label="Price"
-                        type="number"
-                        step="0.01"
-                        value={variant.price || ''}
-                        onChange={(e) => updateVariant(index, 'price', parseFloat(e.target.value))}
-                        required
-                      />
-                      <Input
-                        label="Quantity"
-                        type="number"
-                        value={variant.quantity || ''}
-                        onChange={(e) => updateVariant(index, 'quantity', parseInt(e.target.value))}
-                        required
-                      />
+              <h2 className="font-semibold text-warm-900 mb-4">Photos</h2>
+              <ImageUpload images={images} onChange={setImages} maxImages={6} />
+            </div>
+
+            {/* Sizes & Pricing */}
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <h2 className="font-semibold text-warm-900 mb-1">Sizes & Pricing</h2>
+              <p className="text-sm text-warm-500 mb-5">Enable the sizes you offer. The default size is shown first on the product page.</p>
+              <div className="space-y-3">
+                {SIZE_DEFS.map((s) => {
+                  const entry = sizes[s.key]
+                  return (
+                    <div
+                      key={s.key}
+                      className={`rounded-xl border-2 transition-colors ${
+                        entry.enabled ? 'border-amber-300 bg-amber-50/40' : 'border-warm-200 bg-warm-50/30'
+                      }`}
+                    >
+                      {/* Size header row */}
+                      <div className="flex items-center gap-3 px-4 py-3">
+                        <input
+                          type="checkbox"
+                          id={`size-${s.key}`}
+                          checked={entry.enabled}
+                          onChange={(e) => updateSize(s.key, 'enabled', e.target.checked)}
+                          className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+                        />
+                        <label htmlFor={`size-${s.key}`} className="flex-1 cursor-pointer">
+                          <span className="font-medium text-warm-900">{s.label}</span>
+                          <span className="ml-2 text-sm text-warm-400">{s.weight}</span>
+                        </label>
+                        {entry.enabled && (
+                          <button
+                            type="button"
+                            onClick={() => setDefaultSize(s.key)}
+                            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                              entry.isDefault
+                                ? 'bg-amber-500 text-white'
+                                : 'bg-warm-200 text-warm-600 hover:bg-amber-100 hover:text-amber-700'
+                            }`}
+                          >
+                            {entry.isDefault ? 'Default' : 'Set default'}
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Price & stock row */}
+                      {entry.enabled && (
+                        <div className="grid grid-cols-2 gap-4 px-4 pb-4">
+                          <div>
+                            <label className="block text-xs font-medium text-warm-600 mb-1">Price (₹)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              placeholder="e.g. 349"
+                              value={entry.price}
+                              onChange={(e) => updateSize(s.key, 'price', e.target.value)}
+                              required={entry.enabled}
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-warm-600 mb-1">Stock (units)</label>
+                            <input
+                              type="number"
+                              min="0"
+                              step="1"
+                              placeholder="e.g. 50"
+                              value={entry.quantity}
+                              onChange={(e) => updateSize(s.key, 'quantity', e.target.value)}
+                              required={entry.enabled}
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(index)}
-                        className="mt-2 text-sm text-red-600 hover:text-red-700"
-                      >
-                        Remove variant
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -374,26 +578,15 @@ export function AdminProductForm() {
 
             {/* Categories */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
-              <h2 className="font-semibold text-warm-900 mb-4">Categories</h2>
-              <div className="space-y-2">
-                {categories.map((cat) => (
-                  <label key={cat.id} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={selectedCategories.includes(cat.id)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedCategories([...selectedCategories, cat.id])
-                        } else {
-                          setSelectedCategories(selectedCategories.filter((id) => id !== cat.id))
-                        }
-                      }}
-                      className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
-                    />
-                    <span className="ml-2 text-warm-700">{cat.name}</span>
-                  </label>
-                ))}
-              </div>
+              <h2 className="font-semibold text-warm-900 mb-1">Categories</h2>
+              {selectedCategories.length > 0 && (
+                <p className="text-xs text-amber-700 mb-3">{selectedCategories.length} selected</p>
+              )}
+              <CategoryGroupSelector
+                categories={categories}
+                selectedIds={selectedCategories}
+                onChange={setSelectedCategories}
+              />
             </div>
 
             {/* Submit */}

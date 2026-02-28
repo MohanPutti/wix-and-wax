@@ -1,7 +1,7 @@
 {
   "name": "wix-and-wax-server",
   "version": "1.0.0",
-  "description": "Wix and Wax Candle Shop - Backend Server",
+  "description": "Wicks and Wax Candle Shop - Backend Server",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",

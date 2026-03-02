@@ -132,6 +132,79 @@ app.post('/api/upload/multiple', upload.array('images', 10), (req, res) => {
   res.json({ success: true, data: { urls } })
 })
 
+// ============================================================
+// SHIPROCKET INTEGRATION
+// ============================================================
+
+const WEIGHT_PER_ITEM_KG = 0.5 // default weight per item
+const FALLBACK_SHIPPING = 99   // used when Shiprocket is unconfigured or fails
+
+let shiprocketToken: string | null = null
+let shiprocketTokenExpiry: number = 0
+
+async function getShiprocketToken(): Promise<string | null> {
+  if (!config.shiprocketEmail || !config.shiprocketPassword) return null
+  if (shiprocketToken && Date.now() < shiprocketTokenExpiry) return shiprocketToken
+
+  try {
+    const res = await fetch('https://apiv2.shiprocket.in/v1/external/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: config.shiprocketEmail, password: config.shiprocketPassword }),
+    })
+    const data = await res.json() as { token?: string }
+    if (data.token) {
+      shiprocketToken = data.token
+      shiprocketTokenExpiry = Date.now() + 23 * 60 * 60 * 1000 // refresh 1h before expiry
+      return shiprocketToken
+    }
+  } catch (err) {
+    console.error('[Shiprocket] Auth failed:', err)
+  }
+  return null
+}
+
+async function getShiprocketRate(deliveryPincode: string, totalItems: number): Promise<number> {
+  if (!config.storePincode) return FALLBACK_SHIPPING
+  const token = await getShiprocketToken()
+  if (!token) return FALLBACK_SHIPPING
+
+  const weight = Math.max(0.5, totalItems * WEIGHT_PER_ITEM_KG)
+  const url = `https://apiv2.shiprocket.in/v1/external/courier/serviceability/?pickup_postcode=${config.storePincode}&delivery_postcode=${deliveryPincode}&weight=${weight}&cod=0`
+
+  try {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } })
+    const data = await res.json() as {
+      data?: {
+        available_courier_companies?: Array<{ freight_charge: number; courier_name: string }>
+        cheapest_courier?: { freight_charge: number }
+      }
+      status?: number
+    }
+
+    if (data?.status === 200 && data.data?.available_courier_companies?.length) {
+      // Use cheapest available courier
+      const sorted = [...data.data.available_courier_companies].sort((a, b) => a.freight_charge - b.freight_charge)
+      return Math.round(sorted[0].freight_charge)
+    }
+  } catch (err) {
+    console.error('[Shiprocket] Rate fetch failed:', err)
+  }
+  return FALLBACK_SHIPPING
+}
+
+// Public endpoint — client calls this when pincode is entered
+app.get('/api/shipping/rates', async (req, res) => {
+  const { pincode, items } = req.query as { pincode?: string; items?: string }
+  if (!pincode || !/^\d{6}$/.test(pincode)) {
+    return res.status(400).json({ success: false, error: 'Valid 6-digit pincode required' })
+  }
+  const itemCount = Math.max(1, parseInt(items || '1', 10))
+  const rate = await getShiprocketRate(pincode, itemCount)
+  const isConfigured = !!(config.shiprocketEmail && config.storePincode)
+  res.json({ success: true, data: { rate, isEstimate: !isConfigured } })
+})
+
 // Address endpoints (requires authentication)
 const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const authHeader = req.headers.authorization
@@ -785,7 +858,10 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
     }
 
     // Calculate totals server-side
-    const shipping = 99 // Fixed shipping cost in INR
+    const deliveryPincode = (shippingAddress as { postalCode?: string })?.postalCode || ''
+    const shipping = deliveryPincode
+      ? await getShiprocketRate(deliveryPincode, orderItems.length)
+      : FALLBACK_SHIPPING
     const ENABLE_GST = false // Set to true to apply 18% GST
     const taxRate = ENABLE_GST ? 0.18 : 0
     const taxableAmount = subtotal - discountAmount

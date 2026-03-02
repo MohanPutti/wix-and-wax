@@ -37,4 +37,9 @@ export const config = {
   phonePeEnvironment: (process.env.PHONEPE_ENVIRONMENT || 'uat') as 'production' | 'uat',
   phonePeCallbackUrl: process.env.PHONEPE_CALLBACK_URL || 'http://localhost:3001/api/payments/phonepe/callback',
   phonePeRedirectUrl: process.env.PHONEPE_REDIRECT_URL || 'http://localhost:5173/payment/status',
+
+  // Shiprocket
+  shiprocketEmail: process.env.SHIPROCKET_EMAIL || '',
+  shiprocketPassword: process.env.SHIPROCKET_PASSWORD || '',
+  storePincode: process.env.STORE_PINCODE || '',
 }

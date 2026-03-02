@@ -460,6 +460,12 @@ class ApiClient {
       body: JSON.stringify(data),
     })
   }
+
+  async getShippingRate(pincode: string, items: number) {
+    return this.request<ApiResponse<{ rate: number; isEstimate: boolean }>>(
+      `/shipping/rates?pincode=${pincode}&items=${items}`
+    )
+  }
 }
 
 export const api = new ApiClient()

@@ -93,6 +93,9 @@ export default function Checkout() {
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [error, setError] = useState('')
   const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new')
+  const [shippingRate, setShippingRate] = useState<number | null>(null)
+  const [shippingLoading, setShippingLoading] = useState(false)
+  const [shippingIsEstimate, setShippingIsEstimate] = useState(false)
 
   const [email, setEmail] = useState(user?.email || '')
   const [shippingAddress, setShippingAddress] = useState<Address>({
@@ -116,6 +119,30 @@ export default function Checkout() {
       }
     }
   }, [addresses, getDefaultAddress, selectedAddressId])
+
+  // Fetch shipping rate when pincode becomes valid (debounced 600ms)
+  useEffect(() => {
+    const pincode = shippingAddress.postalCode
+    if (!/^\d{6}$/.test(pincode)) {
+      setShippingRate(null)
+      return
+    }
+    setShippingLoading(true)
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.getShippingRate(pincode, itemsToCheckout.length || 1)
+        if (res.success && res.data) {
+          setShippingRate(res.data.rate)
+          setShippingIsEstimate(res.data.isEstimate)
+        }
+      } catch {
+        setShippingRate(null)
+      } finally {
+        setShippingLoading(false)
+      }
+    }, 600)
+    return () => clearTimeout(timer)
+  }, [shippingAddress.postalCode, itemsToCheckout.length])
 
   const setShippingAddressFromSaved = (saved: SavedAddress) => {
     setShippingAddress({
@@ -304,7 +331,7 @@ export default function Checkout() {
     }
   }
 
-  const shipping = 99
+  const shipping = shippingRate ?? 99
   const tax = ENABLE_GST ? selectedSubtotal * GST_RATE : 0
   const total = selectedSubtotal + shipping + tax
 
@@ -550,8 +577,17 @@ export default function Checkout() {
                   <span>₹{selectedSubtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-warm-600">
-                  <span>Shipping</span>
-                  <span>₹{shipping.toFixed(2)}</span>
+                  <span>
+                    Shipping
+                    {shippingIsEstimate && shippingRate !== null && (
+                      <span className="ml-1 text-xs text-warm-400">(est.)</span>
+                    )}
+                  </span>
+                  {shippingLoading ? (
+                    <span className="text-xs text-warm-400 animate-pulse">Calculating…</span>
+                  ) : (
+                    <span>₹{shipping.toFixed(0)}</span>
+                  )}
                 </div>
                 {ENABLE_GST && (
                   <div className="flex justify-between text-warm-600">

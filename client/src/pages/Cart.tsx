@@ -211,7 +211,7 @@ export default function Cart() {
               </div>
               <div className="flex justify-between text-warm-600">
                 <span>Shipping</span>
-                <span>Calculated at checkout</span>
+                <span className="text-sm">Calculated at checkout</span>
               </div>
               {ENABLE_GST && (
                 <div className="flex justify-between text-warm-600">

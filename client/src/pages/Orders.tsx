@@ -299,10 +299,12 @@ export function OrderDetail() {
                 <span>Shipping</span>
                 <span>₹{Number(order.shipping).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-warm-600">
-                <span>Tax</span>
-                <span>₹{Number(order.tax).toFixed(2)}</span>
-              </div>
+              {Number(order.tax) > 0 && (
+                <div className="flex justify-between text-warm-600">
+                  <span>Tax (GST)</span>
+                  <span>₹{Number(order.tax).toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t border-warm-200 pt-3">
                 <div className="flex justify-between text-lg font-semibold text-warm-900">
                   <span>Total</span>
@@ -502,10 +504,12 @@ export function OrderConfirmation() {
                 <span>Shipping</span>
                 <span>₹{Number(order.shipping).toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-warm-600">
-                <span>Tax</span>
-                <span>₹{Number(order.tax).toFixed(2)}</span>
-              </div>
+              {Number(order.tax) > 0 && (
+                <div className="flex justify-between text-warm-600">
+                  <span>Tax (GST)</span>
+                  <span>₹{Number(order.tax).toFixed(2)}</span>
+                </div>
+              )}
               <div className="border-t border-warm-200 pt-3">
                 <div className="flex justify-between text-lg font-semibold text-warm-900">
                   <span>Total</span>

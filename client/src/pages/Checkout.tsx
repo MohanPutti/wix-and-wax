@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { ENABLE_GST, GST_RATE } from '../config'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
@@ -304,7 +305,7 @@ export default function Checkout() {
   }
 
   const shipping = 99
-  const tax = selectedSubtotal * 0.18
+  const tax = ENABLE_GST ? selectedSubtotal * GST_RATE : 0
   const total = selectedSubtotal + shipping + tax
 
   const shippingAddresses = addresses.filter((a) => a.type === 'shipping')
@@ -552,10 +553,12 @@ export default function Checkout() {
                   <span>Shipping</span>
                   <span>₹{shipping.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-warm-600">
-                  <span>Tax (18% GST)</span>
-                  <span>₹{tax.toFixed(2)}</span>
-                </div>
+                {ENABLE_GST && (
+                  <div className="flex justify-between text-warm-600">
+                    <span>Tax (18% GST)</span>
+                    <span>₹{tax.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="border-t border-warm-200 pt-3">
                   <div className="flex justify-between text-lg font-semibold text-warm-900">
                     <span>Total</span>

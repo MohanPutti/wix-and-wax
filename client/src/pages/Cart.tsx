@@ -1,4 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
+import { ENABLE_GST } from '../config'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   selectCart,
@@ -212,10 +213,12 @@ export default function Cart() {
                 <span>Shipping</span>
                 <span>Calculated at checkout</span>
               </div>
-              <div className="flex justify-between text-warm-600">
-                <span>Tax</span>
-                <span>Calculated at checkout</span>
-              </div>
+              {ENABLE_GST && (
+                <div className="flex justify-between text-warm-600">
+                  <span>Tax (GST)</span>
+                  <span>Calculated at checkout</span>
+                </div>
+              )}
               <div className="border-t border-warm-200 pt-3">
                 <div className="flex justify-between text-lg font-semibold text-warm-900">
                   <span>Estimated Total</span>

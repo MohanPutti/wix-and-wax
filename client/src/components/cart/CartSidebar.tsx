@@ -150,7 +150,7 @@ export default function CartSidebar() {
                           <span>₹{subtotal.toFixed(2)}</span>
                         </div>
                         <p className="text-sm text-warm-500 mb-6">
-                          Shipping and taxes calculated at checkout.
+                          Shipping calculated at checkout.
                         </p>
                         <Link to="/cart" onClick={handleClose}>
                           <Button className="w-full mb-3" size="lg" variant="outline">

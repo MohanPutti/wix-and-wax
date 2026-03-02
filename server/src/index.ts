@@ -786,7 +786,8 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
 
     // Calculate totals server-side
     const shipping = 99 // Fixed shipping cost in INR
-    const taxRate = 0.18 // 18% GST
+    const ENABLE_GST = false // Set to true to apply 18% GST
+    const taxRate = ENABLE_GST ? 0.18 : 0
     const taxableAmount = subtotal - discountAmount
     const tax = taxableAmount * taxRate
     const total = taxableAmount + tax + shipping

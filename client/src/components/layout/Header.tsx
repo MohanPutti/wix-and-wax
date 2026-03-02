@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { THEME } from '../../config'
 import {
   ShoppingBagIcon,
   UserIcon,
@@ -111,7 +112,7 @@ export default function Header() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const isTransparent = isHome && !scrolled && !isMobileMenuOpen
+  const isTransparent = false // hero is now light so header is always solid
 
   const handleDropdownEnter = (label: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -155,13 +156,13 @@ export default function Header() {
   }
 
   return (
-    <header className={`sticky top-0 z-40 transition-all duration-300 ${isTransparent ? 'bg-transparent border-transparent' : 'bg-cream-50 border-b border-warm-200'}`}>
+    <header className={`sticky top-0 z-40 transition-all duration-300 ${THEME.headerBg}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo — hidden on home page at top */}
-          <Link to="/" className={`flex items-center space-x-2 flex-shrink-0 transition-opacity duration-300 ${isHome ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
             <span className="text-2xl">&#x1F56F;</span>
-            <span className="font-serif text-xl font-semibold text-warm-900">Wicks and Wax</span>
+            <span className={`font-serif text-xl font-semibold ${THEME.heading}`}>Wicks and Wax</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -173,7 +174,7 @@ export default function Header() {
                 onMouseEnter={() => handleDropdownEnter(nav.label)}
                 onMouseLeave={handleDropdownLeave}
               >
-                <button className="flex items-center gap-1 px-3 py-2 text-xs font-semibold tracking-wide text-warm-700 hover:text-amber-700 transition-colors rounded-lg hover:bg-amber-50">
+                <button className={`flex items-center gap-1 px-3 py-2 text-xs font-semibold tracking-wide ${THEME.headerText} ${THEME.headerHover} transition-colors rounded-lg hover:bg-amber-50`}>
                   {nav.label}
                   <ChevronDownIcon
                     className={`h-3 w-3 transition-transform duration-200 ${
@@ -223,7 +224,7 @@ export default function Header() {
             {/* Cart */}
             <button
               onClick={handleToggleCart}
-              className="relative p-2 text-warm-600 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50"
+              className={`relative p-2 ${THEME.headerText} hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50`}
               aria-label="Open cart"
             >
               <ShoppingBagIcon className="h-6 w-6" />
@@ -237,7 +238,7 @@ export default function Header() {
             {/* User */}
             {isAuthenticated ? (
               <div className="relative group">
-                <button className="flex items-center space-x-1.5 p-2 text-warm-600 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50">
+                <button className={`flex items-center space-x-1.5 p-2 ${THEME.headerText} hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50`}>
                   <UserIcon className="h-6 w-6" />
                   <span className="hidden sm:inline text-sm">{user?.firstName || 'Account'}</span>
                 </button>
@@ -262,7 +263,7 @@ export default function Header() {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className="p-2 text-warm-600 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50">
+              <Link to="/login" className={`p-2 ${THEME.headerText} hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50`}>
                 <UserIcon className="h-6 w-6" />
               </Link>
             )}
@@ -270,7 +271,7 @@ export default function Header() {
             {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden p-2 text-warm-600 hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50"
+              className={`lg:hidden p-2 ${THEME.headerText} hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50`}
               aria-label="Toggle menu"
             >
               {isMobileMenuOpen ? <XMarkIcon className="h-6 w-6" /> : <Bars3Icon className="h-6 w-6" />}

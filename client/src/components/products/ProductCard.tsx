@@ -13,7 +13,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   const defaultVariant = product.variants.find((v) => v.isDefault) || product.variants[0]
   const mainImage = product.images[0]?.url || '/placeholder-candle.jpg'
   const price = Number(defaultVariant?.price) || 0
-  const comparePrice = defaultVariant?.comparePrice ? Number(defaultVariant.comparePrice) : null
+  const mrp = defaultVariant?.comparePrice ? Number(defaultVariant.comparePrice) : null
+  const hasDiscount = mrp !== null && mrp > price
+  const discountPct = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -26,19 +28,24 @@ export default function ProductCard({ product }: ProductCardProps) {
   return (
     <Link
       to={`/products/${product.slug}`}
-      className="group bg-white rounded-2xl shadow-soft overflow-hidden hover:shadow-warm transition-shadow duration-300"
+      className="group bg-white rounded-2xl shadow-soft overflow-hidden hover:shadow-warm transition-shadow duration-300 flex flex-col h-full"
     >
       {/* Image */}
-      <div className="aspect-square overflow-hidden bg-warm-100">
+      <div className="aspect-square overflow-hidden bg-warm-100 relative">
         <img
           src={mainImage}
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
         />
+        {hasDiscount && (
+          <span className="absolute top-3 left-3 bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+            {discountPct}% OFF
+          </span>
+        )}
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-1">
         {/* Categories */}
         {product.categories.length > 0 && (
           <p className="text-xs text-amber-600 font-medium mb-1">
@@ -51,20 +58,20 @@ export default function ProductCard({ product }: ProductCardProps) {
           {product.name}
         </h3>
 
-        {/* Price */}
-        <div className="mt-2 flex items-center gap-2">
-          <span className="text-lg font-semibold text-warm-900">
-            ₹{price.toFixed(2)}
-          </span>
-          {comparePrice && comparePrice > price && (
-            <span className="text-sm text-warm-400 line-through">
-              ₹{comparePrice.toFixed(2)}
+        {/* Price — pushed down, button stays at bottom */}
+        <div className="mt-auto pt-3">
+          <div className="flex items-baseline gap-2 flex-wrap mb-3">
+            <span className="text-lg font-semibold text-warm-900">
+              ₹{price.toFixed(0)}
             </span>
-          )}
-        </div>
+            {hasDiscount && (
+              <span className="text-sm text-warm-400 line-through">
+                ₹{mrp!.toFixed(0)}
+              </span>
+            )}
+          </div>
 
-        {/* Add to Cart Button */}
-        <div className="mt-4">
+          {/* Add to Cart Button */}
           <Button
             variant="outline"
             size="sm"

@@ -6,7 +6,7 @@ import { useAppDispatch } from '../store/hooks'
 import { addToCart } from '../store/slices/cartSlice'
 import Button from '../components/ui/Button'
 import Spinner from '../components/ui/Spinner'
-import type { ProductVariant } from '../types'
+import type { ProductVariant, ProductMetadata } from '../types'
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -48,6 +48,15 @@ export default function ProductDetail() {
   const currentVariant = selectedVariant || product.variants[0]
   const mainImage = product.images[selectedImageIndex]?.url || '/placeholder-candle.jpg'
 
+  const price = Number(currentVariant.price)
+  const mrp = currentVariant.comparePrice ? Number(currentVariant.comparePrice) : null
+  const hasDiscount = mrp !== null && mrp > price
+  const discountPct = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0
+
+  const meta = product.metadata as ProductMetadata | undefined
+  const fragrances = meta?.fragrances?.filter(Boolean) || []
+  const colors = meta?.colors?.filter(Boolean) || []
+
   const handleAddToCart = async () => {
     if (!currentVariant) return
     setIsAddingToCart(true)
@@ -73,12 +82,17 @@ export default function ProductDetail() {
         {/* Images */}
         <div>
           {/* Main Image */}
-          <div className="aspect-square bg-warm-100 rounded-2xl overflow-hidden mb-4">
+          <div className="aspect-square bg-warm-100 rounded-2xl overflow-hidden mb-4 relative">
             <img
               src={mainImage}
               alt={product.name}
               className="w-full h-full object-cover"
             />
+            {hasDiscount && (
+              <span className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
+                {discountPct}% OFF
+              </span>
+            )}
           </div>
 
           {/* Thumbnail Gallery */}
@@ -109,7 +123,7 @@ export default function ProductDetail() {
         <div>
           {/* Categories */}
           {product.categories.length > 0 && (
-            <div className="flex gap-2 mb-4">
+            <div className="flex gap-2 mb-4 flex-wrap">
               {product.categories.map((c) => (
                 <Link
                   key={c.category.id}
@@ -122,43 +136,92 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* Name & Price */}
+          {/* Name */}
           <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-4">
             {product.name}
           </h1>
 
-          <div className="flex items-center gap-3 mb-6">
-            <span className="text-2xl font-semibold text-warm-900">
-              ₹{Number(currentVariant.price).toFixed(2)}
+          {/* Pricing */}
+          <div className="flex items-baseline gap-3 mb-2 flex-wrap">
+            <span className="text-3xl font-bold text-warm-900">
+              ₹{price.toFixed(0)}
             </span>
-            {currentVariant.comparePrice && Number(currentVariant.comparePrice) > Number(currentVariant.price) && (
-              <span className="text-lg text-warm-400 line-through">
-                ₹{Number(currentVariant.comparePrice).toFixed(2)}
-              </span>
+            {hasDiscount && (
+              <>
+                <span className="text-xl text-warm-400 line-through">
+                  ₹{mrp!.toFixed(0)}
+                </span>
+                <span className="text-sm font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                  {discountPct}% off
+                </span>
+              </>
             )}
           </div>
+          {hasDiscount && (
+            <p className="text-sm text-warm-500 mb-6">
+              MRP: <span className="line-through">₹{mrp!.toFixed(0)}</span>
+              {' '}· You save ₹{(mrp! - price).toFixed(0)}
+            </p>
+          )}
+          {!hasDiscount && <div className="mb-6" />}
 
           {/* Description */}
-          <p className="text-warm-600 mb-8 leading-relaxed">{product.description}</p>
+          {product.description && (
+            <p className="text-warm-600 mb-8 leading-relaxed">{product.description}</p>
+          )}
+
+          {/* Fragrances */}
+          {fragrances.length > 0 && (
+            <div className="mb-5">
+              <p className="text-sm font-medium text-warm-700 mb-2">Fragrance</p>
+              <div className="flex flex-wrap gap-2">
+                {fragrances.map((f) => (
+                  <span
+                    key={f}
+                    className="text-sm bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200"
+                  >
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Colors */}
+          {colors.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-warm-700 mb-2">Color</p>
+              <div className="flex flex-wrap gap-2">
+                {colors.map((c) => (
+                  <span
+                    key={c}
+                    className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200"
+                  >
+                    {c}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Variant Selection */}
-          {product.variants.length > 1 && (
+          {product.variants.length > 0 && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-warm-700 mb-2">
-                Size
+                {product.variants[0]?.options?.base ? `${product.variants[0].options.base} — Size` : 'Size'}
               </label>
               <div className="flex flex-wrap gap-2">
                 {product.variants.map((variant) => (
                   <button
                     key={variant.id}
                     onClick={() => setSelectedVariant(variant)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-colors ${
+                    className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
                       currentVariant.id === variant.id
                         ? 'border-amber-600 bg-amber-50 text-amber-700'
                         : 'border-warm-200 hover:border-warm-300 text-warm-700'
                     }`}
                   >
-                    {variant.name}
+                    {variant.options?.size || variant.name}
                   </button>
                 ))}
               </div>
@@ -210,16 +273,11 @@ export default function ProductDetail() {
           {/* Product Details */}
           <div className="mt-12 border-t border-warm-200 pt-8">
             <h2 className="font-semibold text-warm-900 mb-4">Product Details</h2>
-            <ul className="space-y-2 text-warm-600">
+            <ul className="space-y-2 text-warm-600 text-sm">
               <li>SKU: {currentVariant.sku}</li>
               {currentVariant.options && Object.entries(currentVariant.options).map(([key, value]) => (
-                <li key={key} className="capitalize">
-                  {key}: {value}
-                </li>
+                <li key={key} className="capitalize">{key}: {value}</li>
               ))}
-              <li>Burn time: Approximately 40-50 hours</li>
-              <li>100% natural soy wax</li>
-              <li>Cotton wick for clean burn</li>
             </ul>
           </div>
         </div>

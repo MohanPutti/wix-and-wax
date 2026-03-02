@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
-import { PencilIcon, TrashIcon, PlusIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { PencilIcon, TrashIcon, PlusIcon, ChevronDownIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useProducts, useProduct, useCategories } from '../../hooks/useProducts'
 import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
@@ -9,7 +9,7 @@ import Spinner from '../../components/ui/Spinner'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import ImageUpload from '../../components/admin/ImageUpload'
-import type { ProductVariant } from '../../types'
+import type { ProductVariant, ProductBase, Fragrance, Color } from '../../types'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning'> = {
   draft: 'default',
@@ -167,6 +167,8 @@ export function AdminProductList() {
   )
 }
 
+// ─── Category Selector ────────────────────────────────────────────────────────
+
 const CATEGORY_GROUPS = [
   {
     label: 'Shop',
@@ -256,55 +258,117 @@ function CategoryGroupSelector({ categories, selectedIds, onChange }: CategoryGr
   )
 }
 
-const SIZE_DEFS = [
-  { key: 'sm', label: 'Small', weight: '100g', suffix: 'SM' },
-  { key: 'md', label: 'Medium', weight: '200g', suffix: 'MD' },
-  { key: 'lg', label: 'Large', weight: '350g', suffix: 'LG' },
-] as const
+// ─── Multi-Select Chips ────────────────────────────────────────────────────────
 
-type SizeKey = (typeof SIZE_DEFS)[number]['key']
+interface MultiSelectChipsProps {
+  label: string
+  all: { id: string; name: string; hex?: string }[]
+  selected: string[]
+  onChange: (names: string[]) => void
+  placeholder?: string
+}
+
+function MultiSelectChips({ label, all, selected, onChange, placeholder }: MultiSelectChipsProps) {
+  const toggle = (name: string) => {
+    if (selected.includes(name)) {
+      onChange(selected.filter((s) => s !== name))
+    } else {
+      onChange([...selected, name])
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium text-warm-700 mb-2">{label}</label>
+      {all.length === 0 ? (
+        <p className="text-sm text-warm-400 italic">
+          {placeholder || `No ${label.toLowerCase()} added yet. Go to Catalog to add them.`}
+        </p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {all.map((item) => {
+            const isSelected = selected.includes(item.name)
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => toggle(item.name)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium border-2 transition-colors ${
+                  isSelected
+                    ? 'border-amber-500 bg-amber-50 text-amber-800'
+                    : 'border-warm-200 bg-white text-warm-600 hover:border-warm-300'
+                }`}
+              >
+                {item.hex && (
+                  <span
+                    className="w-3 h-3 rounded-full border border-warm-300 flex-shrink-0"
+                    style={{ background: item.hex }}
+                  />
+                )}
+                {item.name}
+                {isSelected && <XMarkIcon className="w-3.5 h-3.5 ml-0.5 text-amber-600" />}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Variant entry per size ───────────────────────────────────────────────────
 
 interface SizeEntry {
   enabled: boolean
+  mrp: string
   price: string
   quantity: string
   isDefault: boolean
 }
 
-const defaultSizes = (): Record<SizeKey, SizeEntry> => ({
-  sm: { enabled: false, price: '', quantity: '', isDefault: false },
-  md: { enabled: true,  price: '', quantity: '', isDefault: true  },
-  lg: { enabled: false, price: '', quantity: '', isDefault: false },
-})
-
-function sizesToVariants(sizes: Record<SizeKey, SizeEntry>, slug: string) {
-  return SIZE_DEFS.filter((s) => sizes[s.key].enabled).map((s) => ({
-    name: `${s.label} (${s.weight})`,
-    sku: `${slug.toUpperCase().replace(/-/g, '_')}_${s.suffix}`,
-    price: parseFloat(sizes[s.key].price) || 0,
-    quantity: parseInt(sizes[s.key].quantity) || 0,
-    isDefault: sizes[s.key].isDefault,
-    options: { size: s.label, weight: s.weight },
-  }))
+function buildDefaultSizeMap(sizes: string[]): Record<string, SizeEntry> {
+  const map: Record<string, SizeEntry> = {}
+  sizes.forEach((size, i) => {
+    map[size] = { enabled: i === 0, mrp: '', price: '', quantity: '', isDefault: i === 0 }
+  })
+  return map
 }
 
-function variantsToSizes(variants: ProductVariant[]): Record<SizeKey, SizeEntry> {
-  const sizes = defaultSizes()
+function sizesToVariants(
+  sizeMap: Record<string, SizeEntry>,
+  base: string,
+  slug: string
+) {
+  return Object.entries(sizeMap)
+    .filter(([, entry]) => entry.enabled)
+    .map(([size, entry]) => ({
+      name: `${base} - ${size}`,
+      sku: `${slug.toUpperCase().replace(/-/g, '_')}_${base.toUpperCase().replace(/\s+/g, '_')}_${size.toUpperCase().replace(/\s+/g, '_')}`,
+      price: parseFloat(entry.price) || 0,
+      comparePrice: entry.mrp ? parseFloat(entry.mrp) : undefined,
+      quantity: parseInt(entry.quantity) || 0,
+      isDefault: entry.isDefault,
+      options: { base, size },
+    }))
+}
+
+function variantsToSizeMap(variants: ProductVariant[]): Record<string, SizeEntry> {
+  const map: Record<string, SizeEntry> = {}
   for (const v of variants) {
-    const match = SIZE_DEFS.find(
-      (s) => v.name.toLowerCase().includes(s.label.toLowerCase()) || v.sku.endsWith(`_${s.suffix}`)
-    )
-    if (match) {
-      sizes[match.key] = {
-        enabled: true,
-        price: String(v.price),
-        quantity: String(v.quantity),
-        isDefault: v.isDefault,
-      }
+    const size = v.options?.size
+    if (!size) continue
+    map[size] = {
+      enabled: true,
+      mrp: v.comparePrice ? String(v.comparePrice) : '',
+      price: String(v.price),
+      quantity: String(v.quantity),
+      isDefault: v.isDefault,
     }
   }
-  return sizes
+  return map
 }
+
+// ─── Admin Product Form ───────────────────────────────────────────────────────
 
 export function AdminProductForm() {
   const { id } = useParams<{ id: string }>()
@@ -317,14 +381,36 @@ export function AdminProductForm() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
+  // Basic info
   const [name, setName] = useState('')
   const [slug, setSlug] = useState('')
   const [description, setDescription] = useState('')
-  const [status, setStatus] = useState('draft')
+  const [status, setStatus] = useState('active')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [images, setImages] = useState<string[]>([])
-  const [sizes, setSizes] = useState<Record<SizeKey, SizeEntry>>(defaultSizes())
 
+  // Catalog selections
+  const [bases, setBases] = useState<ProductBase[]>([])
+  const [fragrances, setFragrances] = useState<Fragrance[]>([])
+  const [colors, setColors] = useState<Color[]>([])
+
+  const [selectedBase, setSelectedBase] = useState<ProductBase | null>(null)
+  const [sizeMap, setSizeMap] = useState<Record<string, SizeEntry>>({})
+  const [selectedFragrances, setSelectedFragrances] = useState<string[]>([])
+  const [selectedColors, setSelectedColors] = useState<string[]>([])
+
+  // Load catalog data
+  useEffect(() => {
+    Promise.all([api.getBases(), api.getFragrances(), api.getColors()]).then(
+      ([b, f, c]) => {
+        if (b.success) setBases(b.data)
+        if (f.success) setFragrances(f.data)
+        if (c.success) setColors(c.data)
+      }
+    )
+  }, [])
+
+  // Populate form when editing
   useEffect(() => {
     if (isEditMode && product) {
       setName(product.name)
@@ -333,26 +419,61 @@ export function AdminProductForm() {
       setStatus(product.status)
       setSelectedCategories(product.categories?.map((c) => c.category.id) || [])
       setImages(product.images?.map((img) => img.url) || [])
+
+      const meta = product.metadata as { fragrances?: string[]; colors?: string[] } | undefined
+      setSelectedFragrances(meta?.fragrances || [])
+      setSelectedColors(meta?.colors || [])
+
       if (product.variants.length > 0) {
-        setSizes(variantsToSizes(product.variants))
+        // Restore base from first variant options
+        const firstBase = product.variants[0]?.options?.base
+        setSizeMap(variantsToSizeMap(product.variants))
+        // selectedBase will be resolved once bases load
+        if (firstBase) {
+          setBases((prev) => {
+            const found = prev.find((b) => b.name === firstBase)
+            if (found) setSelectedBase(found)
+            return prev
+          })
+          // Also set after bases load via an additional effect
+          setSelectedBase({ id: '', name: firstBase, sizes: product.variants.map((v) => v.options?.size || '') })
+        }
       }
     }
   }, [isEditMode, product])
+
+  // When bases load, resolve the selectedBase name
+  useEffect(() => {
+    if (bases.length > 0 && selectedBase) {
+      const found = bases.find((b) => b.name === selectedBase.name)
+      if (found) setSelectedBase(found)
+    }
+  }, [bases])
+
+  const handleBaseChange = (baseId: string) => {
+    const base = bases.find((b) => b.id === baseId) || null
+    setSelectedBase(base)
+    if (base) {
+      setSizeMap(buildDefaultSizeMap(base.sizes))
+    } else {
+      setSizeMap({})
+    }
+  }
 
   const handleNameChange = (value: string) => {
     setName(value)
     setSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
   }
 
-  const updateSize = (key: SizeKey, field: keyof SizeEntry, value: string | boolean) => {
-    setSizes((prev) => ({ ...prev, [key]: { ...prev[key], [field]: value } }))
+  const updateSize = (size: string, field: keyof SizeEntry, value: string | boolean) => {
+    setSizeMap((prev) => ({ ...prev, [size]: { ...prev[size], [field]: value } }))
   }
 
-  const setDefaultSize = (key: SizeKey) => {
-    setSizes((prev) => {
+  const setDefaultSize = (size: string) => {
+    setSizeMap((prev) => {
       const next = { ...prev }
-      ;(Object.keys(next) as SizeKey[]).forEach((k) => {
-        next[k] = { ...next[k], isDefault: k === key }
+      Object.keys(next).forEach((k) => {
+        next[k] = { ...next[k], isDefault: k === size }
       })
       return next
     })
@@ -361,7 +482,12 @@ export function AdminProductForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const enabledSizes = SIZE_DEFS.filter((s) => sizes[s.key].enabled)
+    if (!selectedBase) {
+      setError('Please select a base (e.g. Jar, Bowl, Tealight).')
+      return
+    }
+
+    const enabledSizes = Object.entries(sizeMap).filter(([, e]) => e.enabled)
     if (enabledSizes.length === 0) {
       setError('Please enable at least one size.')
       return
@@ -371,27 +497,32 @@ export function AdminProductForm() {
     setError('')
 
     try {
-      const newVariants = sizesToVariants(sizes, slug)
+      const newVariants = sizesToVariants(sizeMap, selectedBase.name, slug)
+      const metadata = { fragrances: selectedFragrances, colors: selectedColors }
 
       if (isEditMode && id) {
-        // 1. Update basic product fields + categories
         await api.updateProduct(id, {
           name,
           slug,
           description,
           status: status as 'draft' | 'active' | 'archived',
           categoryIds: selectedCategories,
+          metadata,
         } as any)
 
-        // 2. Sync images — replace all in one call
         await api.syncProductImages(id, images)
 
-        // 3. Sync variants — update existing, add new, delete removed
         const existingVariants = product?.variants || []
         for (const v of newVariants) {
           const existing = existingVariants.find((ev) => ev.sku === v.sku)
           if (existing) {
-            await api.updateVariant(id, existing.id, { price: v.price, quantity: v.quantity, isDefault: v.isDefault, name: v.name })
+            await api.updateVariant(id, existing.id, {
+              price: v.price,
+              comparePrice: v.comparePrice,
+              quantity: v.quantity,
+              isDefault: v.isDefault,
+              name: v.name,
+            })
           } else {
             await api.addVariant(id, v)
           }
@@ -402,16 +533,22 @@ export function AdminProductForm() {
           }
         }
       } else {
-        // Create: send everything in one request
-        await api.createProduct({
+        // Create product WITHOUT images first — image URLs are relative paths
+        // that fail the core API's z.string().url() validation.
+        // We sync images separately via the custom /images/sync endpoint.
+        const created = await api.createProduct({
           name,
           slug,
           description,
           status: status as 'draft' | 'active' | 'archived',
+          metadata,
           variants: newVariants,
           categoryIds: selectedCategories,
-          images: images.map((url, i) => ({ url, alt: name, sortOrder: i })),
         } as any)
+
+        if (images.length > 0) {
+          await api.syncProductImages(created.data.id, images)
+        }
       }
 
       navigate('/admin/products')
@@ -430,6 +567,8 @@ export function AdminProductForm() {
     )
   }
 
+  const enabledSizeCount = Object.values(sizeMap).filter((e) => e.enabled).length
+
   return (
     <div>
       <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-8">
@@ -445,6 +584,7 @@ export function AdminProductForm() {
       <form onSubmit={handleSubmit}>
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-6">
+
             {/* Basic Info */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
               <h2 className="font-semibold text-warm-900 mb-4">Basic Information</h2>
@@ -480,83 +620,161 @@ export function AdminProductForm() {
               <ImageUpload images={images} onChange={setImages} maxImages={6} />
             </div>
 
-            {/* Sizes & Pricing */}
+            {/* Fragrances */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
-              <h2 className="font-semibold text-warm-900 mb-1">Sizes & Pricing</h2>
-              <p className="text-sm text-warm-500 mb-5">Enable the sizes you offer. The default size is shown first on the product page.</p>
-              <div className="space-y-3">
-                {SIZE_DEFS.map((s) => {
-                  const entry = sizes[s.key]
-                  return (
-                    <div
-                      key={s.key}
-                      className={`rounded-xl border-2 transition-colors ${
-                        entry.enabled ? 'border-amber-300 bg-amber-50/40' : 'border-warm-200 bg-warm-50/30'
-                      }`}
-                    >
-                      {/* Size header row */}
-                      <div className="flex items-center gap-3 px-4 py-3">
-                        <input
-                          type="checkbox"
-                          id={`size-${s.key}`}
-                          checked={entry.enabled}
-                          onChange={(e) => updateSize(s.key, 'enabled', e.target.checked)}
-                          className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
-                        />
-                        <label htmlFor={`size-${s.key}`} className="flex-1 cursor-pointer">
-                          <span className="font-medium text-warm-900">{s.label}</span>
-                          <span className="ml-2 text-sm text-warm-400">{s.weight}</span>
-                        </label>
+              <h2 className="font-semibold text-warm-900 mb-1">Fragrances</h2>
+              <p className="text-sm text-warm-500 mb-4">Select all fragrances available for this product.</p>
+              <MultiSelectChips
+                label="Available Fragrances"
+                all={fragrances}
+                selected={selectedFragrances}
+                onChange={setSelectedFragrances}
+                placeholder="No fragrances added yet. Go to Catalog to add them."
+              />
+            </div>
+
+            {/* Colors */}
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <h2 className="font-semibold text-warm-900 mb-1">Colors</h2>
+              <p className="text-sm text-warm-500 mb-4">Select all colors available for this product.</p>
+              <MultiSelectChips
+                label="Available Colors"
+                all={colors}
+                selected={selectedColors}
+                onChange={setSelectedColors}
+                placeholder="No colors added yet. Go to Catalog to add them."
+              />
+            </div>
+
+            {/* Base & Sizes */}
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <h2 className="font-semibold text-warm-900 mb-1">Base & Sizes</h2>
+              <p className="text-sm text-warm-500 mb-5">
+                Choose the product base (e.g. Jar, Bowl, Tealight). Available sizes will appear based on your selection.
+                {bases.length === 0 && (
+                  <span className="ml-1 text-amber-600">
+                    No bases configured —{' '}
+                    <Link to="/admin/catalog" className="underline">go to Catalog</Link> to add them.
+                  </span>
+                )}
+              </p>
+
+              {/* Base selector */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-warm-700 mb-1">Base *</label>
+                <select
+                  value={selectedBase?.id || ''}
+                  onChange={(e) => handleBaseChange(e.target.value)}
+                  required
+                  className="w-full px-4 py-2.5 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white"
+                >
+                  <option value="">Select a base…</option>
+                  {bases.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Size entries */}
+              {selectedBase && Object.keys(sizeMap).length > 0 && (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider">
+                    Sizes for {selectedBase.name}
+                    {enabledSizeCount > 0 && (
+                      <span className="ml-2 text-amber-600 normal-case tracking-normal font-medium">
+                        {enabledSizeCount} enabled
+                      </span>
+                    )}
+                  </p>
+
+                  {(selectedBase.sizes || Object.keys(sizeMap)).map((size) => {
+                    const entry = sizeMap[size]
+                    if (!entry) return null
+                    return (
+                      <div
+                        key={size}
+                        className={`rounded-xl border-2 transition-colors ${
+                          entry.enabled ? 'border-amber-300 bg-amber-50/40' : 'border-warm-200 bg-warm-50/30'
+                        }`}
+                      >
+                        {/* Size header row */}
+                        <div className="flex items-center gap-3 px-4 py-3">
+                          <input
+                            type="checkbox"
+                            id={`size-${size}`}
+                            checked={entry.enabled}
+                            onChange={(e) => updateSize(size, 'enabled', e.target.checked)}
+                            className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+                          />
+                          <label htmlFor={`size-${size}`} className="flex-1 cursor-pointer">
+                            <span className="font-medium text-warm-900">{size}</span>
+                          </label>
+                          {entry.enabled && (
+                            <button
+                              type="button"
+                              onClick={() => setDefaultSize(size)}
+                              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                                entry.isDefault
+                                  ? 'bg-amber-500 text-white'
+                                  : 'bg-warm-200 text-warm-600 hover:bg-amber-100 hover:text-amber-700'
+                              }`}
+                            >
+                              {entry.isDefault ? 'Default' : 'Set default'}
+                            </button>
+                          )}
+                        </div>
+
+                        {/* MRP, Price & Stock */}
                         {entry.enabled && (
-                          <button
-                            type="button"
-                            onClick={() => setDefaultSize(s.key)}
-                            className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
-                              entry.isDefault
-                                ? 'bg-amber-500 text-white'
-                                : 'bg-warm-200 text-warm-600 hover:bg-amber-100 hover:text-amber-700'
-                            }`}
-                          >
-                            {entry.isDefault ? 'Default' : 'Set default'}
-                          </button>
+                          <div className="grid grid-cols-3 gap-3 px-4 pb-4">
+                            <div>
+                              <label className="block text-xs font-medium text-warm-600 mb-1">
+                                MRP (₹)
+                                <span className="ml-1 text-warm-400 font-normal">(optional)</span>
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                placeholder="e.g. 499"
+                                value={entry.mrp}
+                                onChange={(e) => updateSize(size, 'mrp', e.target.value)}
+                                className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-warm-600 mb-1">Selling Price (₹)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                placeholder="e.g. 349"
+                                value={entry.price}
+                                onChange={(e) => updateSize(size, 'price', e.target.value)}
+                                required={entry.enabled}
+                                className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-xs font-medium text-warm-600 mb-1">Stock (units)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="1"
+                                placeholder="e.g. 50"
+                                value={entry.quantity}
+                                onChange={(e) => updateSize(size, 'quantity', e.target.value)}
+                                required={entry.enabled}
+                                className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                              />
+                            </div>
+                          </div>
                         )}
                       </div>
-
-                      {/* Price & stock row */}
-                      {entry.enabled && (
-                        <div className="grid grid-cols-2 gap-4 px-4 pb-4">
-                          <div>
-                            <label className="block text-xs font-medium text-warm-600 mb-1">Price (₹)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              placeholder="e.g. 349"
-                              value={entry.price}
-                              onChange={(e) => updateSize(s.key, 'price', e.target.value)}
-                              required={entry.enabled}
-                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-warm-600 mb-1">Stock (units)</label>
-                            <input
-                              type="number"
-                              min="0"
-                              step="1"
-                              placeholder="e.g. 50"
-                              value={entry.quantity}
-                              onChange={(e) => updateSize(s.key, 'quantity', e.target.value)}
-                              required={entry.enabled}
-                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

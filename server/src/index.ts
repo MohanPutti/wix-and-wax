@@ -147,6 +147,108 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   next()
 }
 
+// ============================================================
+// CATALOG MANAGEMENT - Bases, Fragrances, Colors
+// ============================================================
+
+// --- ProductBase ---
+app.get('/api/bases', async (_req, res) => {
+  try {
+    const bases = await prisma.productBase.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: bases })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch bases' })
+  }
+})
+
+app.post('/api/bases', requireAuth, async (req, res) => {
+  try {
+    const { name, sizes } = req.body as { name: string; sizes: string[] }
+    const base = await prisma.productBase.create({ data: { id: uuidv4(), name, sizes } })
+    res.json({ success: true, data: base })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to create base' })
+  }
+})
+
+app.put('/api/bases/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const { name, sizes } = req.body as { name: string; sizes: string[] }
+    const base = await prisma.productBase.update({ where: { id }, data: { name, sizes } })
+    res.json({ success: true, data: base })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to update base' })
+  }
+})
+
+app.delete('/api/bases/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.productBase.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete base' })
+  }
+})
+
+// --- Fragrances ---
+app.get('/api/fragrances', async (_req, res) => {
+  try {
+    const fragrances = await prisma.fragrance.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: fragrances })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch fragrances' })
+  }
+})
+
+app.post('/api/fragrances', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body as { name: string }
+    const fragrance = await prisma.fragrance.create({ data: { id: uuidv4(), name } })
+    res.json({ success: true, data: fragrance })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to create fragrance' })
+  }
+})
+
+app.delete('/api/fragrances/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.fragrance.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete fragrance' })
+  }
+})
+
+// --- Colors ---
+app.get('/api/colors', async (_req, res) => {
+  try {
+    const colors = await prisma.color.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: colors })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch colors' })
+  }
+})
+
+app.post('/api/colors', requireAuth, async (req, res) => {
+  try {
+    const { name, hex } = req.body as { name: string; hex?: string }
+    const color = await prisma.color.create({ data: { id: uuidv4(), name, hex } })
+    res.json({ success: true, data: color })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to create color' })
+  }
+})
+
+app.delete('/api/colors/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.color.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete color' })
+  }
+})
+
 // Sync product images directly via Prisma (bypasses core URL validation)
 app.put('/api/products/:id/images/sync', requireAuth, async (req, res) => {
   try {

@@ -24,6 +24,7 @@ import AdminDashboard from './pages/admin/Dashboard'
 import { AdminProductList, AdminProductForm } from './pages/admin/Products'
 import { AdminOrderList, AdminOrderDetail } from './pages/admin/Orders'
 import AdminCategories from './pages/admin/Categories'
+import AdminCatalog from './pages/admin/Catalog'
 
 function AppContent() {
   const dispatch = useAppDispatch()
@@ -192,6 +193,14 @@ function AppContent() {
         element={
           <AdminLayout>
             <AdminCategories />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/catalog"
+        element={
+          <AdminLayout>
+            <AdminCatalog />
           </AdminLayout>
         }
       />

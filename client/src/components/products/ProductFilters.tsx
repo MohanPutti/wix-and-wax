@@ -56,7 +56,11 @@ const PRICE_RANGES = [
   { value: '1999+', label: '₹1,999+' },
 ]
 
-export default function ProductFilters() {
+interface ProductFiltersProps {
+  onSelect?: () => void
+}
+
+export default function ProductFilters({ onSelect }: ProductFiltersProps = {}) {
   const [searchParams, setSearchParams] = useSearchParams()
   const activeCategory = searchParams.get('category') || searchParams.get('occasion') || ''
   const priceRange = searchParams.get('price') || ''
@@ -83,6 +87,7 @@ export default function ProductFilters() {
     }
     newParams.delete('page')
     setSearchParams(newParams)
+    onSelect?.()
   }
 
   const handlePriceChange = (range: string) => {
@@ -94,6 +99,7 @@ export default function ProductFilters() {
     }
     newParams.delete('page')
     setSearchParams(newParams)
+    onSelect?.()
   }
 
   return (

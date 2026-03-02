@@ -6,6 +6,7 @@ import {
   TagIcon,
   ClipboardDocumentListIcon,
   ArrowLeftIcon,
+  SparklesIcon,
 } from '@heroicons/react/24/outline'
 import { useAppSelector } from '../../store/hooks'
 import { selectIsAdmin, selectIsLoading } from '../../store/slices/authSlice'
@@ -17,6 +18,7 @@ interface AdminLayoutProps {
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: HomeIcon },
   { name: 'Products', href: '/admin/products', icon: ShoppingBagIcon },
+  { name: 'Catalog', href: '/admin/catalog', icon: SparklesIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
   { name: 'Orders', href: '/admin/orders', icon: ClipboardDocumentListIcon },
 ]

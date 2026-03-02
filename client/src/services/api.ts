@@ -9,6 +9,9 @@ import type {
   Order,
   Address,
   SavedAddress,
+  ProductBase,
+  Fragrance,
+  Color,
 } from '../types'
 
 const API_BASE = '/api'
@@ -174,6 +177,59 @@ class ApiClient {
     return this.request<ApiResponse<void>>(`/products/${productId}/variants/${variantId}`, {
       method: 'DELETE',
     })
+  }
+
+  // Catalog endpoints - Bases, Fragrances, Colors
+  async getBases() {
+    return this.request<ApiResponse<ProductBase[]>>('/bases')
+  }
+
+  async createBase(data: { name: string; sizes: string[] }) {
+    return this.request<ApiResponse<ProductBase>>('/bases', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateBase(id: string, data: { name: string; sizes: string[] }) {
+    return this.request<ApiResponse<ProductBase>>(`/bases/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteBase(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/bases/${id}`, { method: 'DELETE' })
+  }
+
+  async getFragrances() {
+    return this.request<ApiResponse<Fragrance[]>>('/fragrances')
+  }
+
+  async createFragrance(name: string) {
+    return this.request<ApiResponse<Fragrance>>('/fragrances', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  async deleteFragrance(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/fragrances/${id}`, { method: 'DELETE' })
+  }
+
+  async getColors() {
+    return this.request<ApiResponse<Color[]>>('/colors')
+  }
+
+  async createColor(data: { name: string; hex?: string }) {
+    return this.request<ApiResponse<Color>>('/colors', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteColor(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/colors/${id}`, { method: 'DELETE' })
   }
 
   // Category endpoints

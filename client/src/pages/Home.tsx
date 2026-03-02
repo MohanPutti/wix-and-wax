@@ -24,6 +24,14 @@ const OCCASIONS = [
   { label: 'Return Favors', icon: '🎀', href: '/products?occasion=return-favors', gradient: 'from-rose-200 to-pink-400', image: null },
 ]
 
+const CORPORATE = [
+  { label: 'Corporate Gifting', icon: '🏢', href: '/products?occasion=corporate', gradient: 'from-slate-200 to-slate-400', image: null },
+  { label: 'Client Gifts', icon: '🤝', href: '/products?occasion=client-gifts', gradient: 'from-blue-200 to-indigo-400', image: null },
+  { label: 'Welcome Kits', icon: '🎒', href: '/products?occasion=welcome-kits', gradient: 'from-teal-200 to-cyan-400', image: null },
+  { label: 'Festive Hampers', icon: '🧧', href: '/products?occasion=festive-hampers', gradient: 'from-red-200 to-orange-400', image: null },
+  { label: 'Brand Candles', icon: '🏷️', href: '/products?occasion=brand-candles', gradient: 'from-violet-200 to-purple-400', image: null },
+]
+
 const WEDDING_EVENTS = [
   { label: 'Wedding Favors', icon: '💍', href: '/products?occasion=wedding-favors', gradient: 'from-rose-100 to-pink-300', image: null },
   { label: 'Mehendi & Haldi', icon: '🌼', href: '/products?occasion=mehendi-haldi', gradient: 'from-yellow-200 to-amber-400', image: null },
@@ -114,76 +122,90 @@ export default function Home() {
         />
       </section>
 
-      {/* Shop by Category Carousel */}
+      {/* Featured Products Carousel */}
       <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-14">
         <SectionHeader
-          title="Shop by Product"
-          subtitle="Explore our full candle collection"
+          title="Featured Candles"
+          subtitle="Our most loved scents"
           viewAllHref="/products"
         />
-        <Carousel itemWidth={256}>
-          {SHOP_CATEGORIES.map((cat) => (
-            <CategoryTile key={cat.label} {...cat} />
-          ))}
-        </Carousel>
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Spinner size="lg" />
+          </div>
+        ) : (
+          <Carousel itemWidth={260}>
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="flex-shrink-0 w-52 sm:w-60"
+                style={{ scrollSnapAlign: 'start' }}
+              >
+                <ProductCard product={product} />
+              </div>
+            ))}
+          </Carousel>
+        )}
       </section>
 
-      {/* Occasions Carousel */}
+      {/* Shop by Category Carousel */}
       <section className="bg-warm-50 py-14">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
           <SectionHeader
-            title="Shop by Occasion"
-            subtitle="Find the perfect candle for every moment"
+            title="Shop by Product"
+            subtitle="Explore our full candle collection"
             viewAllHref="/products"
           />
           <Carousel itemWidth={256}>
-            {OCCASIONS.map((occ) => (
-              <CategoryTile key={occ.label} {...occ} />
+            {SHOP_CATEGORIES.map((cat) => (
+              <CategoryTile key={cat.label} {...cat} />
             ))}
           </Carousel>
         </div>
       </section>
 
-      {/* Wedding & Events Carousel */}
+      {/* Occasions Carousel */}
       <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-14">
         <SectionHeader
-          title="Wedding &amp; Events"
-          subtitle="Make every celebration unforgettable"
-          viewAllHref="/products?occasion=wedding-favors"
+          title="Shop by Occasion"
+          subtitle="Find the perfect candle for every moment"
+          viewAllHref="/products"
         />
         <Carousel itemWidth={256}>
-          {WEDDING_EVENTS.map((item) => (
-            <CategoryTile key={item.label} {...item} />
+          {OCCASIONS.map((occ) => (
+            <CategoryTile key={occ.label} {...occ} />
           ))}
         </Carousel>
       </section>
 
-      {/* Featured Products Carousel */}
+      {/* Wedding & Events Carousel */}
       <section className="bg-warm-50 py-14">
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
           <SectionHeader
-            title="Featured Candles"
-            subtitle="Our most loved scents"
-            viewAllHref="/products"
+            title="Wedding &amp; Events"
+            subtitle="Make every celebration unforgettable"
+            viewAllHref="/products?occasion=wedding-favors"
           />
-          {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Spinner size="lg" />
-            </div>
-          ) : (
-            <Carousel itemWidth={260}>
-              {products.map((product) => (
-                <div
-                  key={product.id}
-                  className="flex-shrink-0 w-52 sm:w-60"
-                  style={{ scrollSnapAlign: 'start' }}
-                >
-                  <ProductCard product={product} />
-                </div>
-              ))}
-            </Carousel>
-          )}
+          <Carousel itemWidth={256}>
+            {WEDDING_EVENTS.map((item) => (
+              <CategoryTile key={item.label} {...item} />
+            ))}
+          </Carousel>
         </div>
+      </section>
+
+      {/* Corporate Gifting Carousel */}
+      <section className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10 py-14">
+        <SectionHeader
+          title="Corporate Gifting"
+          subtitle="Thoughtful candles that leave a lasting impression"
+          viewAllHref="/products?occasion=corporate"
+        />
+        <Carousel itemWidth={256}>
+          {CORPORATE.map((item) => (
+            <CategoryTile key={item.label} {...item} />
+          ))}
+        </Carousel>
       </section>
 
     </div>

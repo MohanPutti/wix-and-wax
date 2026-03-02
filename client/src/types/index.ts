@@ -24,6 +24,24 @@ export interface AuthResponse {
   }
 }
 
+// Catalog types (admin-managed master lists)
+export interface ProductBase {
+  id: string
+  name: string
+  sizes: string[]
+}
+
+export interface Fragrance {
+  id: string
+  name: string
+}
+
+export interface Color {
+  id: string
+  name: string
+  hex?: string
+}
+
 // Product types
 export interface ProductVariant {
   id: string
@@ -35,6 +53,12 @@ export interface ProductVariant {
   quantity: number
   options?: Record<string, string>
   isDefault: boolean
+}
+
+// Product metadata for fragrances and colors
+export interface ProductMetadata {
+  fragrances?: string[]
+  colors?: string[]
 }
 
 export interface ProductImage {
@@ -59,6 +83,7 @@ export interface Product {
   slug: string
   description?: string
   status: 'draft' | 'active' | 'archived'
+  metadata?: ProductMetadata
   variants: ProductVariant[]
   categories: { category: Category }[]
   images: ProductImage[]

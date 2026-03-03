@@ -458,6 +458,7 @@ export function AdminProductForm() {
   const [selectedColors, setSelectedColors] = useState<string[]>([])
   const [selectedPackaging, setSelectedPackaging] = useState<string[]>([])
   const [packagingPrices, setPackagingPrices] = useState<Record<string, string>>({})
+  const [packagingMrp, setPackagingMrp] = useState<Record<string, string>>({})
   const [packagingStock, setPackagingStock] = useState<Record<string, string>>({})
   const [baseMode, setBaseMode] = useState<SelectionMode>('single')
   const [fragranceMode, setFragranceMode] = useState<SelectionMode>('none')
@@ -509,20 +510,23 @@ export function AdminProductForm() {
         product.variants.every((v) => v.options?.packaging && !v.options?.base)
 
       if (isPackagingOnly) {
-        // Restore packaging names, prices, stock from variants
+        // Restore packaging names, prices, mrp, stock from variants
         const pkgNames: string[] = []
         const prices: Record<string, string> = {}
+        const mrps: Record<string, string> = {}
         const stock: Record<string, string> = {}
         for (const v of product.variants) {
           const name = v.options?.packaging
           if (name) {
             pkgNames.push(name)
             prices[name] = String(v.price)
+            mrps[name] = v.comparePrice ? String(v.comparePrice) : ''
             stock[name] = String(v.quantity)
           }
         }
         setSelectedPackaging(pkgNames)
         setPackagingPrices(prices)
+        setPackagingMrp(mrps)
         setPackagingStock(stock)
       } else {
         // Case 1 or base-only: packaging from metadata
@@ -610,7 +614,7 @@ export function AdminProductForm() {
             name,
             sku: `${slug.toUpperCase().replace(/-/g, '_')}_${name.toUpperCase().replace(/\s+/g, '_')}`,
             price: parseFloat(packagingPrices[name]) || 0,
-            comparePrice: undefined,
+            comparePrice: packagingMrp[name] ? parseFloat(packagingMrp[name]) : undefined,
             quantity: parseInt(packagingStock[name]) || 0,
             isDefault: i === 0,
             options: { packaging: name },
@@ -983,17 +987,28 @@ export function AdminProductForm() {
                     {selectedBases.length === 0 ? 'Pricing & Stock per Packaging' : 'Add-on Price per Packaging'}
                   </p>
                   {selectedPackaging.map((name) => (
-                    <div key={name} className={`rounded-xl border-2 border-warm-200 px-4 py-3 ${selectedBases.length === 0 ? 'grid grid-cols-3 gap-3 items-end' : 'flex items-center gap-4'}`}>
-                      <span className="text-sm font-medium text-warm-900 col-span-1">{name}</span>
+                    <div key={name} className="rounded-xl border-2 border-warm-200 px-4 py-3">
+                      <span className="text-sm font-semibold text-warm-900 block mb-2">{name}</span>
                       {selectedBases.length === 0 ? (
-                        <>
+                        <div className="grid grid-cols-3 gap-3">
                           <div>
-                            <label className="block text-xs font-medium text-warm-600 mb-1">Price (₹)</label>
+                            <label className="block text-xs font-medium text-warm-600 mb-1">
+                              MRP (₹) <span className="text-warm-400 font-normal">(optional)</span>
+                            </label>
                             <input
-                              type="number" min="0" step="1" placeholder="e.g. 299"
+                              type="number" min="0" step="1" placeholder="e.g. 499"
+                              value={packagingMrp[name] || ''}
+                              onChange={(e) => setPackagingMrp((prev) => ({ ...prev, [name]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-warm-600 mb-1">Selling Price (₹)</label>
+                            <input
+                              type="number" min="0" step="1" placeholder="e.g. 349"
                               value={packagingPrices[name] || ''}
                               onChange={(e) => setPackagingPrices((prev) => ({ ...prev, [name]: e.target.value }))}
-                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             />
                           </div>
                           <div>
@@ -1002,10 +1017,10 @@ export function AdminProductForm() {
                               type="number" min="0" step="1" placeholder="e.g. 50"
                               value={packagingStock[name] || ''}
                               onChange={(e) => setPackagingStock((prev) => ({ ...prev, [name]: e.target.value }))}
-                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                             />
                           </div>
-                        </>
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <label className="text-xs font-medium text-warm-600 whitespace-nowrap">Add-on (₹)</label>

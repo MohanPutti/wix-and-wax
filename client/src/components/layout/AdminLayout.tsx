@@ -46,9 +46,14 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
       <div className="fixed inset-y-0 left-0 w-64 bg-warm-900">
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="flex items-center justify-center h-16 px-4 border-b border-warm-800">
-            <span className="text-xl mr-2">&#x1F56F;</span>
-            <span className="font-serif text-xl font-semibold text-cream-100">Admin Panel</span>
+          <div className="flex items-center justify-center h-16 px-4 border-b border-warm-800 gap-0">
+            <img
+              src="/logo-monogram.png"
+              alt=""
+              className="w-12 h-12 object-contain"
+              style={{ filter: 'brightness(0) invert(1)' }}
+            />
+            <span className="font-serif text-lg font-semibold text-cream-100">Wicks &amp; Wax</span>
           </div>
 
           {/* Navigation */}

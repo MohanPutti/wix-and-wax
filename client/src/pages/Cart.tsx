@@ -5,6 +5,7 @@ import {
   selectCart,
   selectItemCount,
   applyDiscount,
+  removeDiscount,
 } from '../store/slices/cartSlice'
 import CartItem from '../components/cart/CartItem'
 import Button from '../components/ui/Button'
@@ -37,6 +38,22 @@ export default function Cart() {
       .filter(item => selectedItems.has(item.id))
       .reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
   }, [cart, selectedItems])
+
+  // Calculate discount amount from applied discounts
+  const discountAmount = useMemo(() => {
+    if (!cart?.discounts?.length) return 0
+    let amount = 0
+    for (const { discount } of cart.discounts) {
+      if (discount.type === 'percentage') {
+        amount += selectedSubtotal * (Number(discount.value) / 100)
+      } else if (discount.type === 'fixed_amount') {
+        amount += Number(discount.value)
+      }
+    }
+    return Math.min(amount, selectedSubtotal)
+  }, [cart?.discounts, selectedSubtotal])
+
+  const estimatedTotal = Math.max(0, selectedSubtotal - discountAmount)
 
   // Toggle individual item selection
   const toggleItemSelection = (itemId: string) => {
@@ -186,16 +203,24 @@ export default function Cart() {
                 {cart.discounts.map((d) => (
                   <div
                     key={d.discount.id}
-                    className="flex justify-between items-center text-sm text-green-600 bg-green-50 px-3 py-2 rounded-lg"
+                    className="flex justify-between items-center text-sm text-green-700 bg-green-50 border border-green-200 px-3 py-2 rounded-lg"
                   >
-                    <span>{d.discount.code}</span>
-                    <span>
-                      {d.discount.type === 'percentage'
-                        ? `-${d.discount.value}%`
-                        : d.discount.type === 'free_shipping'
-                        ? 'Free Shipping'
-                        : `-$${d.discount.value}`}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono font-semibold">{d.discount.code}</span>
+                      <span className="text-green-600">
+                        {d.discount.type === 'percentage'
+                          ? `-${d.discount.value}%`
+                          : d.discount.type === 'free_shipping'
+                          ? 'Free Shipping'
+                          : `-₹${d.discount.value}`}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => dispatch(removeDiscount(d.discount.id))}
+                      className="text-green-400 hover:text-red-500 transition-colors ml-2 text-xs underline"
+                    >
+                      Remove
+                    </button>
                   </div>
                 ))}
               </div>
@@ -207,6 +232,12 @@ export default function Cart() {
                 <span>Selected Items ({selectedCount})</span>
                 <span className="font-medium text-warm-900">₹{selectedSubtotal.toFixed(2)}</span>
               </div>
+              {discountAmount > 0 && (
+                <div className="flex justify-between text-green-600">
+                  <span>Discount</span>
+                  <span className="font-medium">-₹{discountAmount.toFixed(2)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-warm-600">
                 <span>Shipping</span>
                 <span className="text-sm">Calculated at checkout</span>
@@ -220,7 +251,7 @@ export default function Cart() {
               <div className="border-t border-warm-200 pt-3">
                 <div className="flex justify-between text-lg font-semibold text-warm-900">
                   <span>Estimated Total</span>
-                  <span>₹{selectedSubtotal.toFixed(2)}</span>
+                  <span>₹{estimatedTotal.toFixed(2)}</span>
                 </div>
               </div>
             </div>

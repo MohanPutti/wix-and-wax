@@ -88,6 +88,20 @@ export default function Checkout() {
     return itemsToCheckout.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0)
   }, [itemsToCheckout])
 
+  // Calculate discount amount from applied cart discounts
+  const discountAmount = useMemo(() => {
+    if (!cart?.discounts?.length) return 0
+    let amount = 0
+    for (const { discount } of cart.discounts) {
+      if (discount.type === 'percentage') {
+        amount += selectedSubtotal * (Number(discount.value) / 100)
+      } else if (discount.type === 'fixed_amount') {
+        amount += Number(discount.value)
+      }
+    }
+    return Math.min(amount, selectedSubtotal)
+  }, [cart?.discounts, selectedSubtotal])
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [orderPlaced, setOrderPlaced] = useState(false)
   const [error, setError] = useState('')
@@ -331,8 +345,8 @@ export default function Checkout() {
   }
 
   const shipping = shippingRate ?? 99
-  const tax = ENABLE_GST ? selectedSubtotal * GST_RATE : 0
-  const total = selectedSubtotal + shipping + tax
+  const tax = ENABLE_GST ? (selectedSubtotal - discountAmount) * GST_RATE : 0
+  const total = selectedSubtotal - discountAmount + shipping + tax
 
   const shippingAddresses = addresses.filter((a) => a.type === 'shipping')
 
@@ -575,6 +589,19 @@ export default function Checkout() {
                   <span>Subtotal ({itemsToCheckout.length} items)</span>
                   <span>₹{selectedSubtotal.toFixed(2)}</span>
                 </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="flex items-center gap-1.5">
+                      Discount
+                      {cart?.discounts?.map(d => (
+                        <span key={d.discount.id} className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-mono">
+                          {d.discount.code}
+                        </span>
+                      ))}
+                    </span>
+                    <span className="font-medium">-₹{discountAmount.toFixed(2)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-warm-600">
                   <span>
                     Shipping

@@ -25,6 +25,7 @@ import { AdminProductList, AdminProductForm } from './pages/admin/Products'
 import { AdminOrderList, AdminOrderDetail } from './pages/admin/Orders'
 import AdminCategories from './pages/admin/Categories'
 import AdminCatalog from './pages/admin/Catalog'
+import AdminDiscounts from './pages/admin/Discounts'
 
 function AppContent() {
   const dispatch = useAppDispatch()
@@ -201,6 +202,14 @@ function AppContent() {
         element={
           <AdminLayout>
             <AdminCatalog />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/discounts"
+        element={
+          <AdminLayout>
+            <AdminDiscounts />
           </AdminLayout>
         }
       />

@@ -12,6 +12,7 @@ import type {
   ProductBase,
   Fragrance,
   Color,
+  Discount,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -283,15 +284,38 @@ class ApiClient {
     })
   }
 
-  async applyDiscount(cartId: string, code: string) {
-    return this.request<ApiResponse<Cart>>(`/cart/${cartId}/discounts`, {
+  // Discount management (admin)
+  async getDiscounts() {
+    return this.request<ApiResponse<Discount[]>>('/discounts')
+  }
+
+  async createDiscount(data: Partial<Discount>) {
+    return this.request<ApiResponse<Discount>>('/discounts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateDiscount(id: string, data: Partial<Discount>) {
+    return this.request<ApiResponse<Discount>>(`/discounts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteDiscount(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/discounts/${id}`, { method: 'DELETE' })
+  }
+
+  async applyDiscount(_cartId: string, code: string) {
+    return this.request<ApiResponse<Cart>>(`/cart/discount`, {
       method: 'POST',
       body: JSON.stringify({ code }),
     })
   }
 
   async removeDiscount(cartId: string, discountId: string) {
-    return this.request<ApiResponse<Cart>>(`/cart/${cartId}/discounts/${discountId}`, {
+    return this.request<ApiResponse<Cart>>(`/cart/${cartId}/discount/${discountId}`, {
       method: 'DELETE',
     })
   }

@@ -158,11 +158,18 @@ export default function Header() {
   return (
     <header className={`sticky top-0 z-40 transition-all duration-300 ${THEME.headerBg}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          {/* Logo — hidden on home page at top */}
-          <Link to="/" className="flex items-center space-x-2 flex-shrink-0">
-            <span className="text-2xl">&#x1F56F;</span>
-            <span className={`font-serif text-xl font-semibold ${THEME.heading}`}>Wicks and Wax</span>
+        <div className="flex items-center justify-between h-18">
+          {/* Logo */}
+          <Link to="/" className="flex-shrink-0 flex items-center gap-0">
+            <img
+              src="/logo-monogram.png"
+              alt=""
+              className="w-14 h-14 object-contain"
+              style={{ filter: 'brightness(0) saturate(100%) invert(20%) sepia(90%) saturate(700%) hue-rotate(5deg) brightness(85%)' }}
+            />
+            <span className="font-serif font-semibold text-warm-900" style={{ fontSize: '1.35rem', letterSpacing: '-0.01em' }}>
+              Wicks &amp; Wax
+            </span>
           </Link>
 
           {/* Desktop Navigation */}

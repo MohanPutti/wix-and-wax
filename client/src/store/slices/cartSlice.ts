@@ -51,12 +51,12 @@ export const fetchCart = createAsyncThunk(
 
 export const addToCart = createAsyncThunk(
   'cart/addToCart',
-  async ({ variantId, quantity = 1 }: { variantId: string; quantity?: number }, { getState, rejectWithValue }) => {
+  async ({ variantId, quantity = 1, note }: { variantId: string; quantity?: number; note?: string }, { getState, rejectWithValue }) => {
     const state = getState() as RootState
     const sessionId = state.cart.sessionId
 
     try {
-      const response = await api.addToCart({ variantId, quantity, sessionId })
+      const response = await api.addToCart({ variantId, quantity, sessionId, note })
       if (response.success) {
         return response.data
       }

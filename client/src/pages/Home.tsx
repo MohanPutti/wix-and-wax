@@ -113,30 +113,24 @@ export default function Home() {
   return (
     <div className={THEME.pageBg}>
       {/* Hero Section */}
-      <section className="bg-warm-900 border-b border-warm-800" style={{ minHeight: '50vh' }}>
-        <div className="flex flex-col items-center justify-center text-center px-6 py-16 sm:py-20 lg:py-24" style={{ minHeight: '50vh' }}>
+      <section className="bg-warm-900 border-b border-warm-800">
+        <div className="flex flex-col items-center justify-center text-center px-6 py-10 sm:py-12">
 
           {/* Eyebrow */}
           <p className="mb-6 tracking-[0.35em] text-amber-500/80 text-xs sm:text-sm uppercase font-medium">
             Hand-poured · Thoughtfully Crafted · Artisan
           </p>
 
-          {/* Main wordmark */}
-          <h1 className="font-serif font-semibold leading-none text-cream-100 mb-2"
-              style={{ fontSize: 'clamp(3rem, 9vw, 7rem)', letterSpacing: '-0.02em' }}>
-            Wicks
-          </h1>
+          {/* Monogram */}
+          <img
+            src="/logo-monogram.png"
+            alt="Wicks & Wax"
+            className="w-44 sm:w-56 h-auto filter invert mix-blend-screen opacity-90"
+          />
 
-          {/* Ornamental divider */}
-          <div className="flex items-center gap-4 my-2">
-            <div className="h-px w-16 sm:w-28 bg-gradient-to-r from-transparent to-amber-500/60" />
-            <span className="font-serif italic text-amber-500" style={{ fontSize: 'clamp(1.3rem, 3.5vw, 2.2rem)' }}>&amp;</span>
-            <div className="h-px w-16 sm:w-28 bg-gradient-to-l from-transparent to-amber-500/60" />
-          </div>
-
-          <h1 className="font-serif font-semibold leading-none text-cream-100 mb-7"
-              style={{ fontSize: 'clamp(3rem, 9vw, 7rem)', letterSpacing: '-0.02em' }}>
-            Wax
+          {/* Brand name */}
+          <h1 className="font-serif font-semibold text-cream-100 mb-4 -mt-8" style={{ fontSize: 'clamp(1.8rem, 5vw, 3rem)', letterSpacing: '-0.01em' }}>
+            Wicks &amp; Wax
           </h1>
 
           {/* Tagline */}

@@ -14,7 +14,7 @@ import type {
   Color,
 } from '../types'
 
-const API_BASE = '/api'
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
 
 class ApiClient {
   private accessToken: string | null = null
@@ -263,7 +263,7 @@ class ApiClient {
     return this.request<ApiResponse<Cart>>(`/cart${query}`)
   }
 
-  async addToCart(data: { variantId: string; quantity: number; sessionId?: string }) {
+  async addToCart(data: { variantId: string; quantity: number; sessionId?: string; note?: string }) {
     return this.request<ApiResponse<Cart>>('/cart/items', {
       method: 'POST',
       body: JSON.stringify(data),

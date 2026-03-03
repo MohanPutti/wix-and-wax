@@ -5,7 +5,7 @@ import type { Product, Category } from '../types'
 interface UseProductsParams {
   page?: number
   limit?: number
-  category?: string
+  categoryId?: string
   status?: string
   search?: string
   minPrice?: number

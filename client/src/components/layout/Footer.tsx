@@ -8,6 +8,17 @@ export default function Footer() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             <div>
+              <div className="mb-5 flex items-center gap-0">
+                <img
+                  src="/logo-monogram.png"
+                  alt=""
+                  className="w-14 h-14 object-contain"
+                  style={{ filter: 'brightness(0) invert(1) saturate(0) opacity(0.9)' }}
+                />
+                <span className="font-serif font-semibold text-cream-100" style={{ fontSize: '1.35rem', letterSpacing: '-0.01em' }}>
+                  Wicks &amp; Wax
+                </span>
+              </div>
               <h2 className="font-serif text-3xl md:text-4xl font-bold text-cream-100 mb-4">
                 Create Something Uniquely Yours
               </h2>
@@ -60,9 +71,10 @@ export default function Footer() {
       </div>
 
       {/* Copyright */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col items-center gap-3">
+        <span className="font-serif font-semibold text-warm-600" style={{ fontSize: '1.1rem' }}>Wicks &amp; Wax</span>
         <p className="text-warm-500 text-sm text-center">
-          &copy; {new Date().getFullYear()} Wicks and Wax. All rights reserved.
+          &copy; {new Date().getFullYear()} Wicks &amp; Wax. All rights reserved.
         </p>
       </div>
     </footer>

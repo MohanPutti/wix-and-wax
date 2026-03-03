@@ -268,7 +268,19 @@ interface MultiSelectChipsProps {
   placeholder?: string
 }
 
-function MultiSelectChips({ label, all, selected, onChange, placeholder }: MultiSelectChipsProps) {
+type SelectionMode = 'none' | 'single' | 'multi'
+
+interface MultiSelectChipsProps {
+  label: string
+  all: { id: string; name: string; hex?: string }[]
+  selected: string[]
+  onChange: (names: string[]) => void
+  placeholder?: string
+  mode: SelectionMode
+  onModeChange: (mode: SelectionMode) => void
+}
+
+function MultiSelectChips({ label, all, selected, onChange, placeholder, mode, onModeChange }: MultiSelectChipsProps) {
   const toggle = (name: string) => {
     if (selected.includes(name)) {
       onChange(selected.filter((s) => s !== name))
@@ -277,9 +289,45 @@ function MultiSelectChips({ label, all, selected, onChange, placeholder }: Multi
     }
   }
 
+  const allSelected = all.length > 0 && selected.length === all.length
+  const toggleAll = () => {
+    onChange(allSelected ? [] : all.map((item) => item.name))
+  }
+
   return (
     <div>
-      <label className="block text-sm font-medium text-warm-700 mb-2">{label}</label>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-sm font-medium text-warm-700">{label}</label>
+        {all.length > 0 && (
+          <button
+            type="button"
+            onClick={toggleAll}
+            className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+          >
+            {allSelected ? 'Deselect All' : 'Select All'}
+          </button>
+        )}
+      </div>
+
+      {/* Selection mode */}
+      <div className="flex gap-3 mb-3">
+        {(['none', 'single', 'multi'] as SelectionMode[]).map((m) => (
+          <label key={m} className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="radio"
+              name={`${label}-mode`}
+              value={m}
+              checked={mode === m}
+              onChange={() => onModeChange(m)}
+              className="text-amber-600 focus:ring-amber-500"
+            />
+            <span className="text-xs text-warm-600 capitalize">
+              {m === 'none' ? 'Display only' : m === 'single' ? 'Single select' : 'Multi select'}
+            </span>
+          </label>
+        ))}
+      </div>
+
       {all.length === 0 ? (
         <p className="text-sm text-warm-400 italic">
           {placeholder || `No ${label.toLowerCase()} added yet. Go to Catalog to add them.`}
@@ -398,6 +446,9 @@ export function AdminProductForm() {
   const [sizeMap, setSizeMap] = useState<Record<string, SizeEntry>>({})
   const [selectedFragrances, setSelectedFragrances] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [fragranceMode, setFragranceMode] = useState<SelectionMode>('none')
+  const [colorMode, setColorMode] = useState<SelectionMode>('none')
+  const [featured, setFeatured] = useState(false)
 
   // Load catalog data
   useEffect(() => {
@@ -420,9 +471,12 @@ export function AdminProductForm() {
       setSelectedCategories(product.categories?.map((c) => c.category.id) || [])
       setImages(product.images?.map((img) => img.url) || [])
 
-      const meta = product.metadata as { fragrances?: string[]; colors?: string[] } | undefined
+      const meta = product.metadata as { fragrances?: string[]; colors?: string[]; fragranceMode?: SelectionMode; colorMode?: SelectionMode; featured?: boolean } | undefined
       setSelectedFragrances(meta?.fragrances || [])
       setSelectedColors(meta?.colors || [])
+      setFragranceMode(meta?.fragranceMode || 'none')
+      setColorMode(meta?.colorMode || 'none')
+      setFeatured(meta?.featured || false)
 
       if (product.variants.length > 0) {
         // Restore base from first variant options
@@ -498,7 +552,7 @@ export function AdminProductForm() {
 
     try {
       const newVariants = sizesToVariants(sizeMap, selectedBase.name, slug)
-      const metadata = { fragrances: selectedFragrances, colors: selectedColors }
+      const metadata = { fragrances: selectedFragrances, colors: selectedColors, fragranceMode, colorMode, featured }
 
       if (isEditMode && id) {
         await api.updateProduct(id, {
@@ -623,26 +677,30 @@ export function AdminProductForm() {
             {/* Fragrances */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
               <h2 className="font-semibold text-warm-900 mb-1">Fragrances</h2>
-              <p className="text-sm text-warm-500 mb-4">Select all fragrances available for this product.</p>
+              <p className="text-sm text-warm-500 mb-4">Select fragrances available for this product and how customers choose them.</p>
               <MultiSelectChips
                 label="Available Fragrances"
                 all={fragrances}
                 selected={selectedFragrances}
                 onChange={setSelectedFragrances}
                 placeholder="No fragrances added yet. Go to Catalog to add them."
+                mode={fragranceMode}
+                onModeChange={setFragranceMode}
               />
             </div>
 
             {/* Colors */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
               <h2 className="font-semibold text-warm-900 mb-1">Colors</h2>
-              <p className="text-sm text-warm-500 mb-4">Select all colors available for this product.</p>
+              <p className="text-sm text-warm-500 mb-4">Select colors available for this product and how customers choose them.</p>
               <MultiSelectChips
                 label="Available Colors"
                 all={colors}
                 selected={selectedColors}
                 onChange={setSelectedColors}
                 placeholder="No colors added yet. Go to Catalog to add them."
+                mode={colorMode}
+                onModeChange={setColorMode}
               />
             </div>
 
@@ -792,6 +850,22 @@ export function AdminProductForm() {
                   { value: 'archived', label: 'Archived' },
                 ]}
               />
+            </div>
+
+            {/* Featured */}
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={featured}
+                  onChange={(e) => setFeatured(e.target.checked)}
+                  className="h-5 w-5 rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+                />
+                <div>
+                  <p className="font-semibold text-warm-900 text-sm">Featured Product</p>
+                  <p className="text-xs text-warm-400 mt-0.5">Show on home page featured section</p>
+                </div>
+              </label>
             </div>
 
             {/* Categories */}

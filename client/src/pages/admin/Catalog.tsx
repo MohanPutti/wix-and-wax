@@ -3,9 +3,116 @@ import { PlusIcon, TrashIcon, PencilIcon, XMarkIcon, CheckIcon } from '@heroicon
 import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
 import Spinner from '../../components/ui/Spinner'
-import type { ProductBase, Fragrance, Color } from '../../types'
+import type { ProductBase, Fragrance, Color, Product } from '../../types'
 
 type Tab = 'bases' | 'fragrances' | 'colors'
+
+// ─── Tag Products Modal ────────────────────────────────────────────────────────
+
+interface TagProductsModalProps {
+  itemName: string
+  field: 'fragrances' | 'colors'
+  onClose: () => void
+}
+
+function TagProductsModal({ itemName, field, onClose }: TagProductsModalProps) {
+  const [products, setProducts] = useState<Product[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [search, setSearch] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  useEffect(() => {
+    api.getProducts({ limit: 100 }).then((res) => {
+      if (res.success) setProducts(res.data)
+      setIsLoading(false)
+    })
+  }, [])
+
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const toggle = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const handleSave = async () => {
+    if (selected.size === 0) { onClose(); return }
+    setIsSaving(true)
+    try {
+      await Promise.all(
+        [...selected].map((id) => {
+          const product = products.find((p) => p.id === id)
+          if (!product) return Promise.resolve()
+          const meta = (product.metadata as Record<string, unknown>) || {}
+          const existing = (meta[field] as string[]) || []
+          if (existing.includes(itemName)) return Promise.resolve()
+          return api.updateProduct(id, { metadata: { ...meta, [field]: [...existing, itemName] } } as any)
+        })
+      )
+    } finally {
+      setIsSaving(false)
+      onClose()
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-warm-100">
+          <h2 className="font-semibold text-warm-900">Tag products with "{itemName}"</h2>
+          <button onClick={onClose} className="p-1 text-warm-400 hover:text-warm-700">
+            <XMarkIcon className="h-5 w-5" />
+          </button>
+        </div>
+        <div className="px-6 py-4">
+          <input
+            type="text"
+            placeholder="Search products…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 mb-3"
+          />
+          {isLoading ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : (
+            <div className="max-h-64 overflow-y-auto space-y-1">
+              {filtered.map((p) => {
+                const meta = (p.metadata as Record<string, unknown>) || {}
+                const alreadyTagged = ((meta[field] as string[]) || []).includes(itemName)
+                return (
+                  <label key={p.id} className={`flex items-center gap-3 px-3 py-2 rounded-lg cursor-pointer hover:bg-warm-50 ${alreadyTagged ? 'opacity-50' : ''}`}>
+                    <input
+                      type="checkbox"
+                      checked={selected.has(p.id) || alreadyTagged}
+                      disabled={alreadyTagged}
+                      onChange={() => toggle(p.id)}
+                      className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-sm text-warm-900">{p.name}</span>
+                    {alreadyTagged && <span className="text-xs text-warm-400 ml-auto">already tagged</span>}
+                  </label>
+                )
+              })}
+              {filtered.length === 0 && <p className="text-sm text-warm-400 text-center py-4">No products found</p>}
+            </div>
+          )}
+        </div>
+        <div className="flex gap-3 px-6 py-4 border-t border-warm-100">
+          <Button variant="outline" size="sm" onClick={onClose} className="flex-1">Skip</Button>
+          <Button size="sm" onClick={handleSave} isLoading={isSaving} className="flex-1">
+            Tag {selected.size > 0 ? `${selected.size} product${selected.size > 1 ? 's' : ''}` : 'Selected'}
+          </Button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 // ─── Base Management ──────────────────────────────────────────────────────────
 
@@ -236,14 +343,18 @@ function SimpleListPanel({ items, isLoading, onAdd, onDelete, namePlaceholder, w
   const [newName, setNewName] = useState('')
   const [newHex, setNewHex] = useState('')
   const [isAdding, setIsAdding] = useState(false)
+  const [addError, setAddError] = useState('')
 
   const handleAdd = async () => {
     if (!newName.trim()) return
     setIsAdding(true)
+    setAddError('')
     try {
       await onAdd(newName.trim(), withHex && newHex ? newHex : undefined)
       setNewName('')
       setNewHex('')
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add. Please try again.')
     } finally {
       setIsAdding(false)
     }
@@ -282,6 +393,7 @@ function SimpleListPanel({ items, isLoading, onAdd, onDelete, namePlaceholder, w
             Add
           </Button>
         </div>
+        {addError && <p className="mt-3 text-sm text-red-600">{addError}</p>}
       </div>
 
       {/* List */}
@@ -329,6 +441,8 @@ export default function AdminCatalog() {
   const [isLoadingFragrances, setIsLoadingFragrances] = useState(true)
   const [isLoadingColors, setIsLoadingColors] = useState(true)
 
+  const [tagModal, setTagModal] = useState<{ name: string; field: 'fragrances' | 'colors' } | null>(null)
+
   const loadFragrances = async () => {
     setIsLoadingFragrances(true)
     const res = await api.getFragrances()
@@ -351,6 +465,7 @@ export default function AdminCatalog() {
   const addFragrance = async (name: string) => {
     await api.createFragrance(name)
     await loadFragrances()
+    setTagModal({ name, field: 'fragrances' })
   }
 
   const deleteFragrance = async (id: string, name: string) => {
@@ -362,6 +477,7 @@ export default function AdminCatalog() {
   const addColor = async (name: string, hex?: string) => {
     await api.createColor({ name, hex })
     await loadColors()
+    setTagModal({ name, field: 'colors' })
   }
 
   const deleteColor = async (id: string, name: string) => {
@@ -378,6 +494,13 @@ export default function AdminCatalog() {
 
   return (
     <div>
+      {tagModal && (
+        <TagProductsModal
+          itemName={tagModal.name}
+          field={tagModal.field}
+          onClose={() => setTagModal(null)}
+        />
+      )}
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-semibold text-warm-900">Catalog</h1>
         <p className="text-warm-500 mt-1">Manage bases, fragrances, and colors used in your products.</p>

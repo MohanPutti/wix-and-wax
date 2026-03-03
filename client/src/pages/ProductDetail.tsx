@@ -16,6 +16,10 @@ export default function ProductDetail() {
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const [selectedColor, setSelectedColor] = useState<string | null>(null)
+  const [selectedColorList, setSelectedColorList] = useState<string[]>([])
+  const [selectedFragranceList, setSelectedFragranceList] = useState<string[]>([])
+  const [selectionError, setSelectionError] = useState('')
 
   // Set default variant when product loads
   if (product && !selectedVariant) {
@@ -53,15 +57,42 @@ export default function ProductDetail() {
   const hasDiscount = mrp !== null && mrp > price
   const discountPct = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0
 
-  const meta = product.metadata as ProductMetadata | undefined
+  const meta = product.metadata as ProductMetadata & { colorMode?: string; fragranceMode?: string } | undefined
   const fragrances = meta?.fragrances?.filter(Boolean) || []
   const colors = meta?.colors?.filter(Boolean) || []
+  const colorMode = meta?.colorMode || 'none'
+  const fragranceMode = meta?.fragranceMode || 'none'
+
+  const toggleFragrance = (f: string) => {
+    setSelectedFragranceList((prev) =>
+      prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]
+    )
+  }
 
   const handleAddToCart = async () => {
     if (!currentVariant) return
+
+    // Validate required selections
+    if (colorMode === 'single' && colors.length > 0 && !selectedColor) {
+      setSelectionError('Please select a color before adding to cart.')
+      return
+    }
+    if (fragranceMode === 'single' && fragrances.length > 0 && selectedFragranceList.length === 0) {
+      setSelectionError('Please select a fragrance before adding to cart.')
+      return
+    }
+    setSelectionError('')
+
+    // Build note from selections
+    const noteParts: string[] = []
+    const colorSelection = colorMode === 'multi' ? selectedColorList : selectedColor ? [selectedColor] : []
+    if (colorSelection.length > 0) noteParts.push(`Color: ${colorSelection.join(', ')}`)
+    if (selectedFragranceList.length > 0) noteParts.push(`Fragrance: ${selectedFragranceList.join(', ')}`)
+    const note = noteParts.join(' | ') || undefined
+
     setIsAddingToCart(true)
     try {
-      dispatch(addToCart({ variantId: currentVariant.id, quantity }))
+      dispatch(addToCart({ variantId: currentVariant.id, quantity, note }))
     } finally {
       setIsAddingToCart(false)
     }
@@ -173,16 +204,40 @@ export default function ProductDetail() {
           {/* Fragrances */}
           {fragrances.length > 0 && (
             <div className="mb-5">
-              <p className="text-sm font-medium text-warm-700 mb-2">Fragrance</p>
+              <p className="text-sm font-medium text-warm-700 mb-2">
+                Fragrance{fragranceMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
+              </p>
               <div className="flex flex-wrap gap-2">
-                {fragrances.map((f) => (
-                  <span
-                    key={f}
-                    className="text-sm bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200"
-                  >
-                    {f}
-                  </span>
-                ))}
+                {fragrances.map((f) => {
+                  if (fragranceMode === 'none') {
+                    return (
+                      <span key={f} className="text-sm bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200">
+                        {f}
+                      </span>
+                    )
+                  }
+                  const isSelected = selectedFragranceList.includes(f)
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => {
+                        if (fragranceMode === 'single') {
+                          setSelectedFragranceList(isSelected ? [] : [f])
+                        } else {
+                          toggleFragrance(f)
+                        }
+                        setSelectionError('')
+                      }}
+                      className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
+                          : 'border-warm-200 text-warm-700 hover:border-amber-300'
+                      }`}
+                    >
+                      {f}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -190,18 +245,46 @@ export default function ProductDetail() {
           {/* Colors */}
           {colors.length > 0 && (
             <div className="mb-6">
-              <p className="text-sm font-medium text-warm-700 mb-2">Color</p>
+              <p className="text-sm font-medium text-warm-700 mb-2">
+                Color{colorMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
+              </p>
               <div className="flex flex-wrap gap-2">
-                {colors.map((c) => (
-                  <span
-                    key={c}
-                    className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200"
-                  >
-                    {c}
-                  </span>
-                ))}
+                {colors.map((c) => {
+                  if (colorMode === 'none') {
+                    return (
+                      <span key={c} className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200">
+                        {c}
+                      </span>
+                    )
+                  }
+                  const isSelected = colorMode === 'multi' ? selectedColorList.includes(c) : selectedColor === c
+                  return (
+                    <button
+                      key={c}
+                      onClick={() => {
+                        if (colorMode === 'multi') {
+                          setSelectedColorList((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c])
+                        } else {
+                          setSelectedColor(isSelected ? null : c)
+                        }
+                        setSelectionError('')
+                      }}
+                      className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
+                          : 'border-warm-200 text-warm-700 hover:border-amber-300'
+                      }`}
+                    >
+                      {c}
+                    </button>
+                  )
+                })}
               </div>
             </div>
+          )}
+
+          {selectionError && (
+            <p className="text-sm text-red-500 mb-4">{selectionError}</p>
           )}
 
           {/* Variant Selection */}

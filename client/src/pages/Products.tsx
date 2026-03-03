@@ -11,7 +11,7 @@ export default function Products() {
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   const page = parseInt(searchParams.get('page') || '1', 10)
-  const category = searchParams.get('category') || searchParams.get('occasion') || undefined
+  const categorySlug = searchParams.get('category') || searchParams.get('occasion') || undefined
   const priceRange = searchParams.get('price') || undefined
 
   let minPrice: number | undefined
@@ -27,16 +27,18 @@ export default function Products() {
     }
   }
 
+  const { categories } = useCategories()
+  const activeCategory = categories.find((c) => c.slug === categorySlug)
+  const categoryId = activeCategory?.id
+
   const { products, isLoading, pagination } = useProducts({
     page,
     limit: 12,
-    category,
+    categoryId,
     status: 'active',
     minPrice,
     maxPrice,
   })
-
-  const { categories } = useCategories()
 
   const handlePageChange = (newPage: number) => {
     const newParams = new URLSearchParams(searchParams)
@@ -45,8 +47,7 @@ export default function Products() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  const activeCategory = categories.find((c) => c.slug === category)
-  const hasActiveFilter = !!category || !!priceRange
+  const hasActiveFilter = !!categorySlug || !!priceRange
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -70,7 +71,7 @@ export default function Products() {
           Filters
           {hasActiveFilter && (
             <span className="bg-amber-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-              {[category, priceRange].filter(Boolean).length}
+              {[categorySlug, priceRange].filter(Boolean).length}
             </span>
           )}
         </button>

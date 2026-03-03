@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react'
-import { PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
+import { PhotoIcon, XMarkIcon, StarIcon } from '@heroicons/react/24/outline'
+import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid'
 import { api } from '../../services/api'
 import Spinner from '../ui/Spinner'
 
@@ -50,6 +51,11 @@ export default function ImageUpload({ images, onChange, maxImages = 5 }: ImageUp
   const handleRemove = (index: number) => {
     const newImages = images.filter((_, i) => i !== index)
     onChange(newImages)
+  }
+
+  const handleSetMain = (index: number) => {
+    const reordered = [images[index], ...images.filter((_, i) => i !== index)]
+    onChange(reordered)
   }
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -112,10 +118,18 @@ export default function ImageUpload({ images, onChange, maxImages = 5 }: ImageUp
               >
                 <XMarkIcon className="h-4 w-4" />
               </button>
-              {index === 0 && (
-                <span className="absolute bottom-2 left-2 text-xs bg-amber-600 text-white px-2 py-1 rounded">
-                  Main
+              {index === 0 ? (
+                <span className="absolute bottom-2 left-2 flex items-center gap-1 text-xs bg-amber-600 text-white px-2 py-1 rounded">
+                  <StarSolidIcon className="h-3 w-3" /> Main
                 </span>
+              ) : (
+                <button
+                  onClick={() => handleSetMain(index)}
+                  title="Set as main photo"
+                  className="absolute bottom-2 left-2 p-1 bg-black/50 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <StarIcon className="h-4 w-4" />
+                </button>
               )}
             </div>
           ))}

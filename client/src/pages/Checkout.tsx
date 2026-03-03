@@ -3,7 +3,7 @@ import { ENABLE_GST, GST_RATE } from '../config'
 import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
-import { selectCart, selectSubtotal, selectSessionId, fetchCart } from '../store/slices/cartSlice'
+import { selectCart, selectSessionId, fetchCart } from '../store/slices/cartSlice'
 import { selectUser, selectIsAuthenticated } from '../store/slices/authSlice'
 import { useAddresses } from '../hooks/useAddresses'
 import { api } from '../services/api'
@@ -63,7 +63,6 @@ export default function Checkout() {
   const location = useLocation()
   const dispatch = useAppDispatch()
   const cart = useAppSelector(selectCart)
-  const subtotal = useAppSelector(selectSubtotal)
   const sessionId = useAppSelector(selectSessionId)
   const user = useAppSelector(selectUser)
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
@@ -226,7 +225,7 @@ export default function Checkout() {
         throw new Error('Failed to create payment order')
       }
 
-      const { provider, redirectUrl } = paymentResponse.data
+      const { provider, redirectUrl } = paymentResponse.data as any
 
       // Handle PhonePe redirect
       if (provider === 'phonepe' && redirectUrl) {

@@ -92,8 +92,7 @@ function DropdownMenu({ items }: DropdownMenuProps) {
 export default function Header() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
-  const { pathname } = useLocation()
-  const isHome = pathname === '/'
+  useLocation()
   const user = useAppSelector(selectUser)
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
   const isAdmin = useAppSelector(selectIsAdmin)
@@ -103,16 +102,7 @@ export default function Header() {
   const [openMobileSection, setOpenMobileSection] = useState<string | null>(null)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
   const [isCustomizeOpen, setIsCustomizeOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
-
-  const isTransparent = false // hero is now light so header is always solid
 
   const handleDropdownEnter = (label: string) => {
     if (timeoutRef.current) clearTimeout(timeoutRef.current)

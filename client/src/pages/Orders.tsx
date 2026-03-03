@@ -113,7 +113,7 @@ export function OrderList() {
 
 export function OrderDetail() {
   const { id } = useParams<{ id: string }>()
-  const navigate = useNavigate()
+  useNavigate()
   const [searchParams] = useSearchParams()
   const isSuccess = searchParams.get('success') === 'true'
   const { order, isLoading, error } = useOrder(id || '')
@@ -133,7 +133,7 @@ export function OrderDetail() {
         throw new Error('Failed to create payment order')
       }
 
-      const { provider, redirectUrl } = paymentResponse.data
+      const { provider, redirectUrl } = paymentResponse.data as any
 
       // Handle PhonePe redirect
       if (provider === 'phonepe' && redirectUrl) {

@@ -3,7 +3,6 @@ import { ENABLE_GST } from '../config'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
   selectCart,
-  selectSubtotal,
   selectItemCount,
   applyDiscount,
 } from '../store/slices/cartSlice'
@@ -16,7 +15,6 @@ export default function Cart() {
   const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const cart = useAppSelector(selectCart)
-  const subtotal = useAppSelector(selectSubtotal)
   const itemCount = useAppSelector(selectItemCount)
 
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set())

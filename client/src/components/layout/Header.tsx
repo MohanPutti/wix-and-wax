@@ -12,53 +12,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useAppDispatch, useAppSelector } from '../../store/hooks'
 import { selectUser, selectIsAuthenticated, selectIsAdmin, logoutUser } from '../../store/slices/authSlice'
 import { selectItemCount, toggleCart } from '../../store/slices/cartSlice'
-
-const NAV_ITEMS = [
-  {
-    label: 'SHOP',
-    items: [
-      { label: 'Jar Candles', href: '/products?category=jar-candles' },
-      { label: 'Scented Sachets', href: '/products?category=scented-sachets' },
-      { label: 'Tealights', href: '/products?category=tealights' },
-      { label: 'Gift Boxes', href: '/products?category=gift-boxes' },
-      { label: 'Custom Name Candles', href: '/products?category=custom-name-candles' },
-      { label: 'New Arrivals', href: '/products?sort=newest' },
-      { label: 'Bestsellers', href: '/products?sort=bestsellers' },
-    ],
-  },
-  {
-    label: 'OCCASIONS',
-    items: [
-      { label: 'Birthdays', href: '/products?occasion=birthdays' },
-      { label: 'Baby Showers', href: '/products?occasion=baby-showers' },
-      { label: 'Anniversaries', href: '/products?occasion=anniversaries' },
-      { label: 'Housewarming', href: '/products?occasion=housewarming' },
-      { label: 'Festivals', href: '/products?occasion=festivals' },
-      { label: 'Return Favors', href: '/products?occasion=return-favors' },
-    ],
-  },
-  {
-    label: 'WEDDING & EVENTS',
-    items: [
-      { label: 'Wedding Favors', href: '/products?occasion=wedding-favors' },
-      { label: 'Mehendi & Haldi Favors', href: '/products?occasion=mehendi-haldi' },
-      { label: 'Bridal Shower', href: '/products?occasion=bridal-shower' },
-      { label: 'Save The Date Hampers', href: '/products?occasion=save-the-date' },
-      { label: 'Luxury Guest Hampers', href: '/products?occasion=luxury-hampers' },
-      { label: 'Bulk Event Orders', href: '/products?occasion=bulk-events' },
-    ],
-  },
-  {
-    label: 'CORPORATE',
-    items: [
-      { label: 'Corporate Gifting', href: '/products?category=corporate' },
-      { label: 'Client Gifts', href: '/products?category=client-gifts' },
-      { label: 'Employee Welcome Kits', href: '/products?category=welcome-kits' },
-      { label: 'Festive Hampers', href: '/products?category=festive-hampers' },
-      { label: 'Brand Customized Candles', href: '/products?category=brand-candles' },
-    ],
-  },
-]
+import { useCategories } from '../../hooks/useProducts'
 
 const WHATSAPP_URL = 'https://wa.me/918368680057'
 
@@ -97,6 +51,18 @@ export default function Header() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
   const isAdmin = useAppSelector(selectIsAdmin)
   const itemCount = useAppSelector(selectItemCount)
+  const { categories } = useCategories()
+
+  // Build nav dynamically: groups = top-level categories (excluding Featured)
+  const groups = categories.filter((c) => !c.parentId && c.slug !== 'featured')
+  const navItems = groups.map((group) => ({
+    label: group.name.toUpperCase(),
+    id: group.id,
+    items: categories
+      .filter((c) => c.parentId === group.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((cat) => ({ label: cat.name, href: `/products?category=${cat.slug}` })),
+  })).filter((g) => g.items.length > 0)
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openMobileSection, setOpenMobileSection] = useState<string | null>(null)
@@ -164,22 +130,22 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-1">
-            {NAV_ITEMS.map((nav) => (
+            {navItems.map((nav) => (
               <div
-                key={nav.label}
+                key={nav.id}
                 className="relative"
-                onMouseEnter={() => handleDropdownEnter(nav.label)}
+                onMouseEnter={() => handleDropdownEnter(nav.id)}
                 onMouseLeave={handleDropdownLeave}
               >
                 <button className={`flex items-center gap-1 px-3 py-2 text-xs font-semibold tracking-wide ${THEME.headerText} ${THEME.headerHover} transition-colors rounded-lg hover:bg-amber-50`}>
                   {nav.label}
                   <ChevronDownIcon
                     className={`h-3 w-3 transition-transform duration-200 ${
-                      activeDropdown === nav.label ? 'rotate-180' : ''
+                      activeDropdown === nav.id ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
-                {activeDropdown === nav.label && <DropdownMenu items={nav.items} />}
+                {activeDropdown === nav.id && <DropdownMenu items={nav.items} />}
               </div>
             ))}
 
@@ -281,20 +247,20 @@ export default function Header() {
       {isMobileMenuOpen && (
         <div className="lg:hidden border-t border-warm-200 bg-cream-50 max-h-[80vh] overflow-y-auto">
           {/* Regular Nav Sections */}
-          {NAV_ITEMS.map((nav) => (
-            <div key={nav.label} className="border-b border-warm-100">
+          {navItems.map((nav) => (
+            <div key={nav.id} className="border-b border-warm-100">
               <button
-                onClick={() => toggleMobileSection(nav.label)}
+                onClick={() => toggleMobileSection(nav.id)}
                 className="flex items-center justify-between w-full px-6 py-4 text-sm font-semibold tracking-wide text-warm-800 hover:bg-amber-50 transition-colors"
               >
                 {nav.label}
                 <ChevronDownIcon
                   className={`h-4 w-4 transition-transform duration-200 ${
-                    openMobileSection === nav.label ? 'rotate-180' : ''
+                    openMobileSection === nav.id ? 'rotate-180' : ''
                   }`}
                 />
               </button>
-              {openMobileSection === nav.label && (
+              {openMobileSection === nav.id && (
                 <div className="bg-warm-50 pb-2">
                   {nav.items.map((item) => (
                     <Link

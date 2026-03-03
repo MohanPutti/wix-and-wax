@@ -1,51 +1,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
-
-const FILTER_GROUPS = [
-  {
-    label: 'Shop',
-    items: [
-      { label: 'Jar Candles', slug: 'jar-candles' },
-      { label: 'Scented Sachets', slug: 'scented-sachets' },
-      { label: 'Tealights', slug: 'tealights' },
-      { label: 'Gift Boxes', slug: 'gift-boxes' },
-      { label: 'Custom Name Candles', slug: 'custom-name-candles' },
-    ],
-  },
-  {
-    label: 'Occasions',
-    items: [
-      { label: 'Birthdays', slug: 'birthdays' },
-      { label: 'Baby Showers', slug: 'baby-showers' },
-      { label: 'Anniversaries', slug: 'anniversaries' },
-      { label: 'Housewarming', slug: 'housewarming' },
-      { label: 'Festivals', slug: 'festivals' },
-      { label: 'Return Favors', slug: 'return-favors' },
-    ],
-  },
-  {
-    label: 'Wedding & Events',
-    items: [
-      { label: 'Wedding Favors', slug: 'wedding-favors' },
-      { label: 'Mehendi & Haldi', slug: 'mehendi-haldi' },
-      { label: 'Bridal Shower', slug: 'bridal-shower' },
-      { label: 'Save the Date', slug: 'save-the-date' },
-      { label: 'Luxury Hampers', slug: 'luxury-hampers' },
-      { label: 'Bulk Event Orders', slug: 'bulk-events' },
-    ],
-  },
-  {
-    label: 'Corporate',
-    items: [
-      { label: 'Corporate Gifting', slug: 'corporate' },
-      { label: 'Client Gifts', slug: 'client-gifts' },
-      { label: 'Welcome Kits', slug: 'welcome-kits' },
-      { label: 'Festive Hampers', slug: 'festive-hampers' },
-      { label: 'Brand Candles', slug: 'brand-candles' },
-    ],
-  },
-]
+import { useCategories } from '../../hooks/useProducts'
 
 const PRICE_RANGES = [
   { value: '', label: 'All Prices' },
@@ -62,20 +18,22 @@ interface ProductFiltersProps {
 
 export default function ProductFilters({ onSelect }: ProductFiltersProps = {}) {
   const [searchParams, setSearchParams] = useSearchParams()
-  const activeCategory = searchParams.get('category') || searchParams.get('occasion') || ''
+  const activeCategory = searchParams.get('category') || ''
   const priceRange = searchParams.get('price') || ''
 
-  // Find which group the active category belongs to and default it open
-  const defaultOpen = FILTER_GROUPS.reduce<Record<string, boolean>>((acc, group) => {
-    acc[group.label] = group.items.some((item) => item.slug === activeCategory)
+  const { categories } = useCategories()
+  const groups = categories.filter((c) => !c.parentId && c.slug !== 'featured')
+
+  const defaultOpen = groups.reduce<Record<string, boolean>>((acc, group) => {
+    const children = categories.filter((c) => c.parentId === group.id)
+    acc[group.id] = children.some((c) => c.slug === activeCategory)
     return acc
   }, {})
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(defaultOpen)
 
-  const toggleGroup = (label: string) => {
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
-  }
+  const toggleGroup = (id: string) =>
+    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }))
 
   const handleCategoryChange = (slug: string) => {
     const newParams = new URLSearchParams(searchParams)
@@ -115,43 +73,42 @@ export default function ProductFilters({ onSelect }: ProductFiltersProps = {}) {
       </button>
 
       <div className="pt-2 space-y-1">
-        {FILTER_GROUPS.map((group) => {
-          const isOpen = !!openGroups[group.label]
-          const hasActive = group.items.some((item) => item.slug === activeCategory)
+        {groups.map((group) => {
+          const children = categories
+            .filter((c) => c.parentId === group.id)
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+          if (children.length === 0) return null
+
+          const isOpen = !!openGroups[group.id]
+          const hasActive = children.some((c) => c.slug === activeCategory)
 
           return (
-            <div key={group.label}>
-              {/* Group Header */}
+            <div key={group.id}>
               <button
-                onClick={() => toggleGroup(group.label)}
+                onClick={() => toggleGroup(group.id)}
                 className={`flex items-center justify-between w-full px-3 py-2 rounded-lg text-xs font-bold tracking-wider uppercase transition-colors ${
-                  hasActive
-                    ? 'text-amber-700 bg-amber-50'
-                    : 'text-warm-500 hover:text-warm-800 hover:bg-warm-50'
+                  hasActive ? 'text-amber-700 bg-amber-50' : 'text-warm-500 hover:text-warm-800 hover:bg-warm-50'
                 }`}
               >
-                <span>{group.label}</span>
+                <span>{group.name}</span>
                 <ChevronDownIcon
-                  className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200 ${
-                    isOpen ? 'rotate-180' : ''
-                  }`}
+                  className={`h-3.5 w-3.5 flex-shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                 />
               </button>
 
-              {/* Group Items */}
               {isOpen && (
                 <div className="mt-0.5 ml-2 space-y-0.5">
-                  {group.items.map((item) => (
+                  {children.map((cat) => (
                     <button
-                      key={item.slug}
-                      onClick={() => handleCategoryChange(item.slug)}
+                      key={cat.id}
+                      onClick={() => handleCategoryChange(cat.slug)}
                       className={`block w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        activeCategory === item.slug
+                        activeCategory === cat.slug
                           ? 'bg-amber-100 text-amber-800 font-medium'
                           : 'text-warm-600 hover:bg-warm-50 hover:text-warm-900'
                       }`}
                     >
-                      {item.label}
+                      {cat.name}
                     </button>
                   ))}
                 </div>
@@ -161,7 +118,7 @@ export default function ProductFilters({ onSelect }: ProductFiltersProps = {}) {
         })}
       </div>
 
-      {/* Divider */}
+      {/* Price Range */}
       <div className="border-t border-warm-100 pt-4 mt-4">
         <p className="px-3 text-xs font-bold tracking-wider uppercase text-warm-500 mb-2">
           Price Range

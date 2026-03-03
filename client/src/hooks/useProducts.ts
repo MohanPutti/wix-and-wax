@@ -95,6 +95,17 @@ export function useProduct(idOrSlug: string, bySlug = false) {
   return { product, isLoading, error }
 }
 
+// Flatten a category tree (API returns root nodes with nested children)
+function flattenCategories(nodes: (Category & { children?: Category[] })[]): Category[] {
+  const result: Category[] = []
+  for (const node of nodes) {
+    const { children, ...cat } = node as Category & { children?: Category[] }
+    result.push(cat)
+    if (children?.length) result.push(...flattenCategories(children))
+  }
+  return result
+}
+
 export function useCategories() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -106,7 +117,7 @@ export function useCategories() {
     try {
       const response = await api.getCategories()
       if (response.success) {
-        setCategories(response.data)
+        setCategories(flattenCategories(response.data as (Category & { children?: Category[] })[]))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch categories')

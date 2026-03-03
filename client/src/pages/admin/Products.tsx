@@ -170,22 +170,11 @@ export function AdminProductList() {
 // ─── Category Selector ────────────────────────────────────────────────────────
 
 const CATEGORY_GROUPS = [
-  {
-    label: 'Shop',
-    slugs: ['jar-candles', 'scented-sachets', 'tealights', 'gift-boxes', 'custom-name-candles'],
-  },
-  {
-    label: 'Occasions',
-    slugs: ['birthdays', 'baby-showers', 'anniversaries', 'housewarming', 'festivals', 'return-favors'],
-  },
-  {
-    label: 'Wedding & Events',
-    slugs: ['wedding-favors', 'mehendi-haldi', 'bridal-shower', 'save-the-date', 'luxury-hampers', 'bulk-events'],
-  },
-  {
-    label: 'Corporate',
-    slugs: ['corporate', 'client-gifts', 'welcome-kits', 'festive-hampers', 'brand-candles'],
-  },
+  { label: 'Shop', slugs: ['jar-candles', 'scented-sachets', 'tealights', 'gift-boxes', 'custom-name-candles'] },
+  { label: 'Occasions', slugs: ['birthdays', 'baby-showers', 'anniversaries', 'housewarming', 'festivals', 'return-favors'] },
+  { label: 'Wedding & Events', slugs: ['wedding-favors', 'mehendi-haldi', 'bridal-shower', 'save-the-date', 'luxury-hampers', 'bulk-events'] },
+  { label: 'Corporate', slugs: ['corporate', 'client-gifts', 'welcome-kits', 'festive-hampers', 'brand-candles'] },
+  { label: 'Featured', slugs: ['featured'] },
 ]
 
 interface CategoryGroupSelectorProps {
@@ -213,6 +202,23 @@ function CategoryGroupSelector({ categories, selectedIds, onChange }: CategoryGr
       {CATEGORY_GROUPS.map((group) => {
         const groupCats = categories.filter((c) => group.slugs.includes(c.slug))
         if (groupCats.length === 0) return null
+
+        // Single-item group (e.g. Featured) — direct checkbox, no accordion
+        if (groupCats.length === 1) {
+          const cat = groupCats[0]
+          return (
+            <label key={group.label} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-warm-50 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={selectedIds.includes(cat.id)}
+                onChange={(e) => toggle(cat.id, e.target.checked)}
+                className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+              />
+              <span className="text-xs font-bold tracking-wider uppercase text-warm-500">{group.label}</span>
+            </label>
+          )
+        }
+
         const isOpen = !!openGroups[group.label]
         const selectedCount = groupCats.filter((c) => selectedIds.includes(c.id)).length
 
@@ -448,7 +454,6 @@ export function AdminProductForm() {
   const [selectedColors, setSelectedColors] = useState<string[]>([])
   const [fragranceMode, setFragranceMode] = useState<SelectionMode>('none')
   const [colorMode, setColorMode] = useState<SelectionMode>('none')
-  const [featured, setFeatured] = useState(false)
 
   // Load catalog data
   useEffect(() => {
@@ -468,15 +473,15 @@ export function AdminProductForm() {
       setSlug(product.slug)
       setDescription(product.description || '')
       setStatus(product.status)
-      setSelectedCategories(product.categories?.map((c) => c.category.id) || [])
+      const catIds = product.categories?.map((c) => c.category.id) || []
+      setSelectedCategories(catIds)
       setImages(product.images?.map((img) => img.url) || [])
 
-      const meta = product.metadata as { fragrances?: string[]; colors?: string[]; fragranceMode?: SelectionMode; colorMode?: SelectionMode; featured?: boolean } | undefined
+      const meta = product.metadata as { fragrances?: string[]; colors?: string[]; fragranceMode?: SelectionMode; colorMode?: SelectionMode } | undefined
       setSelectedFragrances(meta?.fragrances || [])
       setSelectedColors(meta?.colors || [])
       setFragranceMode(meta?.fragranceMode || 'none')
       setColorMode(meta?.colorMode || 'none')
-      setFeatured(meta?.featured || false)
 
       if (product.variants.length > 0) {
         // Restore base from first variant options
@@ -552,7 +557,7 @@ export function AdminProductForm() {
 
     try {
       const newVariants = sizesToVariants(sizeMap, selectedBase.name, slug)
-      const metadata = { fragrances: selectedFragrances, colors: selectedColors, fragranceMode, colorMode, featured }
+      const metadata = { fragrances: selectedFragrances, colors: selectedColors, fragranceMode, colorMode }
 
       if (isEditMode && id) {
         await api.updateProduct(id, {
@@ -850,22 +855,6 @@ export function AdminProductForm() {
                   { value: 'archived', label: 'Archived' },
                 ]}
               />
-            </div>
-
-            {/* Featured */}
-            <div className="bg-white rounded-xl p-6 shadow-soft">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={featured}
-                  onChange={(e) => setFeatured(e.target.checked)}
-                  className="h-5 w-5 rounded border-warm-300 text-amber-600 focus:ring-amber-500"
-                />
-                <div>
-                  <p className="font-semibold text-warm-900 text-sm">Featured Product</p>
-                  <p className="text-xs text-warm-400 mt-0.5">Show on home page featured section</p>
-                </div>
-              </label>
             </div>
 
             {/* Categories */}

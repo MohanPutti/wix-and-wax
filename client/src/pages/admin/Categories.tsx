@@ -7,11 +7,13 @@ import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
 import type { Category } from '../../types'
 
+const MAIN_GROUPS = ['Shop', 'Occasions', 'Wedding & Events', 'Corporate']
+
 export default function AdminCategories() {
   const { categories, isLoading, refresh } = useCategories()
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ name: '', slug: '', description: '' })
+  const [formData, setFormData] = useState({ name: '', slug: '', description: '', group: '' })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleNameChange = (name: string) => {
@@ -26,13 +28,23 @@ export default function AdminCategories() {
     e.preventDefault()
     setIsSubmitting(true)
 
+    // Find the parent category by matching the selected group name
+    const parentCat = categories.find((c) => c.name === formData.group && !c.parentId)
+
+    const payload: Partial<Category> = {
+      name: formData.name,
+      slug: formData.slug,
+      description: formData.description || undefined,
+      parentId: parentCat?.id || undefined,
+    }
+
     try {
       if (editingId) {
-        await api.updateCategory(editingId, formData)
+        await api.updateCategory(editingId, payload)
       } else {
-        await api.createCategory(formData)
+        await api.createCategory(payload)
       }
-      setFormData({ name: '', slug: '', description: '' })
+      setFormData({ name: '', slug: '', description: '', group: '' })
       setIsAdding(false)
       setEditingId(null)
       refresh()
@@ -45,10 +57,12 @@ export default function AdminCategories() {
 
   const handleEdit = (category: Category) => {
     setEditingId(category.id)
+    const parent = categories.find((c) => c.id === category.parentId)
     setFormData({
       name: category.name,
       slug: category.slug,
       description: category.description || '',
+      group: parent?.name || '',
     })
     setIsAdding(true)
   }
@@ -66,7 +80,12 @@ export default function AdminCategories() {
   const handleCancel = () => {
     setIsAdding(false)
     setEditingId(null)
-    setFormData({ name: '', slug: '', description: '' })
+    setFormData({ name: '', slug: '', description: '', group: '' })
+  }
+
+  const getGroupName = (cat: Category) => {
+    if (!cat.parentId) return '—'
+    return categories.find((c) => c.id === cat.parentId)?.name || '—'
   }
 
   if (isLoading) {
@@ -110,6 +129,24 @@ export default function AdminCategories() {
                 required
               />
             </div>
+
+            {/* Category Group dropdown */}
+            <div>
+              <label className="block text-sm font-medium text-warm-700 mb-1">
+                Category Group
+              </label>
+              <select
+                value={formData.group}
+                onChange={(e) => setFormData({ ...formData, group: e.target.value })}
+                className="w-full px-4 py-2.5 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-warm-900 bg-white"
+              >
+                <option value="">None</option>
+                {MAIN_GROUPS.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-warm-700 mb-1">Description</label>
               <textarea
@@ -131,54 +168,64 @@ export default function AdminCategories() {
         </div>
       )}
 
-      {/* Categories List */}
-      <div className="bg-white rounded-xl shadow-soft overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-warm-50 border-b border-warm-200">
-            <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Name</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Slug</th>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">
-                Description
-              </th>
-              <th className="text-right px-6 py-4 text-sm font-semibold text-warm-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((category) => (
-              <tr key={category.id} className="border-b border-warm-100 hover:bg-warm-50">
-                <td className="px-6 py-4 font-medium text-warm-900">{category.name}</td>
-                <td className="px-6 py-4 text-warm-600">{category.slug}</td>
-                <td className="px-6 py-4 text-warm-600 max-w-xs truncate">
-                  {category.description || '-'}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => handleEdit(category)}
-                      className="p-2 text-warm-500 hover:text-amber-600 transition-colors"
-                    >
-                      <PencilIcon className="h-5 w-5" />
-                    </button>
-                    <button
-                      onClick={() => handleDelete(category.id)}
-                      className="p-2 text-warm-500 hover:text-red-600 transition-colors"
-                    >
-                      <TrashIcon className="h-5 w-5" />
-                    </button>
-                  </div>
-                </td>
+      {/* Categories List — hidden while form is open */}
+      {!isAdding && (
+        <div className="bg-white rounded-xl shadow-soft overflow-hidden">
+          <table className="w-full">
+            <thead className="bg-warm-50 border-b border-warm-200">
+              <tr>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Name</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Group</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Slug</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Description</th>
+                <th className="text-right px-6 py-4 text-sm font-semibold text-warm-700">Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {categories.map((category) => (
+                <tr key={category.id} className="border-b border-warm-100 hover:bg-warm-50">
+                  <td className="px-6 py-4 font-medium text-warm-900">{category.name}</td>
+                  <td className="px-6 py-4">
+                    {getGroupName(category) !== '—' ? (
+                      <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-full">
+                        {getGroupName(category)}
+                      </span>
+                    ) : (
+                      <span className="text-warm-400 text-sm">—</span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-warm-600">{category.slug}</td>
+                  <td className="px-6 py-4 text-warm-600 max-w-xs truncate">
+                    {category.description || '-'}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        onClick={() => handleEdit(category)}
+                        className="p-2 text-warm-500 hover:text-amber-600 transition-colors"
+                      >
+                        <PencilIcon className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(category.id)}
+                        className="p-2 text-warm-500 hover:text-red-600 transition-colors"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-        {categories.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-warm-500">No categories found</p>
-          </div>
-        )}
-      </div>
+          {categories.length === 0 && (
+            <div className="text-center py-12">
+              <p className="text-warm-500">No categories found</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

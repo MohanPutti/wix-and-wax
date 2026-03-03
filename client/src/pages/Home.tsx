@@ -1,45 +1,36 @@
 import { Link } from 'react-router-dom'
-import { useProducts } from '../hooks/useProducts'
+import { useProducts, useCategories } from '../hooks/useProducts'
 import ProductCard from '../components/products/ProductCard'
 import Carousel from '../components/ui/Carousel'
 import Spinner from '../components/ui/Spinner'
 import { THEME } from '../config'
 
-const SHOP_CATEGORIES = [
-  { label: 'Jar Candles', icon: '🕯️', href: '/products?category=jar-candles', gradient: 'from-amber-100 to-amber-300', image: null },
-  { label: 'Scented Sachets', icon: '🌸', href: '/products?category=scented-sachets', gradient: 'from-warm-100 to-warm-300', image: null },
-  { label: 'Tealights', icon: '✨', href: '/products?category=tealights', gradient: 'from-amber-50 to-amber-200', image: null },
-  { label: 'Gift Boxes', icon: '🎁', href: '/products?category=gift-boxes', gradient: 'from-warm-200 to-amber-300', image: null },
-  { label: 'Custom Name Candles', icon: '✍️', href: '/products?category=custom-name-candles', gradient: 'from-amber-200 to-amber-400', image: null },
-  { label: 'New Arrivals', icon: '🆕', href: '/products?sort=newest', gradient: 'from-warm-50 to-warm-200', image: null },
-  { label: 'Bestsellers', icon: '⭐', href: '/products?sort=bestsellers', gradient: 'from-amber-300 to-amber-500', image: null },
-]
-
-const OCCASIONS = [
-  { label: 'Birthdays', icon: '🎂', href: '/products?occasion=birthdays', gradient: 'from-warm-100 to-amber-200', image: null },
-  { label: 'Baby Showers', icon: '👶', href: '/products?occasion=baby-showers', gradient: 'from-amber-50 to-warm-200', image: null },
-  { label: 'Anniversaries', icon: '💑', href: '/products?occasion=anniversaries', gradient: 'from-amber-200 to-amber-400', image: null },
-  { label: 'Housewarming', icon: '🏡', href: '/products?occasion=housewarming', gradient: 'from-warm-200 to-warm-400', image: null },
-  { label: 'Festivals', icon: '🪔', href: '/products?occasion=festivals', gradient: 'from-amber-300 to-amber-500', image: null },
-  { label: 'Return Favors', icon: '🎀', href: '/products?occasion=return-favors', gradient: 'from-warm-100 to-warm-300', image: null },
-]
-
-const CORPORATE = [
-  { label: 'Corporate Gifting', icon: '🏢', href: '/products?occasion=corporate', gradient: 'from-warm-200 to-warm-400', image: null },
-  { label: 'Client Gifts', icon: '🤝', href: '/products?occasion=client-gifts', gradient: 'from-amber-100 to-warm-300', image: null },
-  { label: 'Welcome Kits', icon: '🎒', href: '/products?occasion=welcome-kits', gradient: 'from-warm-50 to-amber-200', image: null },
-  { label: 'Festive Hampers', icon: '🧧', href: '/products?occasion=festive-hampers', gradient: 'from-amber-200 to-amber-400', image: null },
-  { label: 'Brand Candles', icon: '🏷️', href: '/products?occasion=brand-candles', gradient: 'from-warm-100 to-warm-300', image: null },
-]
-
-const WEDDING_EVENTS = [
-  { label: 'Wedding Favors', icon: '💍', href: '/products?occasion=wedding-favors', gradient: 'from-amber-50 to-warm-200', image: null },
-  { label: 'Mehendi & Haldi', icon: '🌼', href: '/products?occasion=mehendi-haldi', gradient: 'from-amber-200 to-amber-400', image: null },
-  { label: 'Bridal Shower', icon: '👰', href: '/products?occasion=bridal-shower', gradient: 'from-warm-100 to-amber-300', image: null },
-  { label: 'Save The Date', icon: '📅', href: '/products?occasion=save-the-date', gradient: 'from-warm-200 to-warm-400', image: null },
-  { label: 'Luxury Hampers', icon: '🧺', href: '/products?occasion=luxury-hampers', gradient: 'from-amber-300 to-amber-500', image: null },
-  { label: 'Bulk Event Orders', icon: '📦', href: '/products?occasion=bulk-events', gradient: 'from-warm-100 to-warm-300', image: null },
-]
+// Visual display config per slug — new categories get defaults
+const CATEGORY_DISPLAY: Record<string, { icon: string; gradient: string }> = {
+  'jar-candles':         { icon: '🕯️', gradient: 'from-amber-100 to-amber-300' },
+  'scented-sachets':     { icon: '🌸', gradient: 'from-warm-100 to-warm-300' },
+  'tealights':           { icon: '✨', gradient: 'from-amber-50 to-amber-200' },
+  'gift-boxes':          { icon: '🎁', gradient: 'from-warm-200 to-amber-300' },
+  'custom-name-candles': { icon: '✍️', gradient: 'from-amber-200 to-amber-400' },
+  'birthdays':           { icon: '🎂', gradient: 'from-warm-100 to-amber-200' },
+  'baby-showers':        { icon: '👶', gradient: 'from-amber-50 to-warm-200' },
+  'anniversaries':       { icon: '💑', gradient: 'from-amber-200 to-amber-400' },
+  'housewarming':        { icon: '🏡', gradient: 'from-warm-200 to-warm-400' },
+  'festivals':           { icon: '🪔', gradient: 'from-amber-300 to-amber-500' },
+  'return-favors':       { icon: '🎀', gradient: 'from-warm-100 to-warm-300' },
+  'wedding-favors':      { icon: '💍', gradient: 'from-amber-50 to-warm-200' },
+  'mehendi-haldi':       { icon: '🌼', gradient: 'from-amber-200 to-amber-400' },
+  'bridal-shower':       { icon: '👰', gradient: 'from-warm-100 to-amber-300' },
+  'save-the-date':       { icon: '📅', gradient: 'from-warm-200 to-warm-400' },
+  'luxury-hampers':      { icon: '🧺', gradient: 'from-amber-300 to-amber-500' },
+  'bulk-events':         { icon: '📦', gradient: 'from-warm-100 to-warm-300' },
+  'corporate':           { icon: '🏢', gradient: 'from-warm-200 to-warm-400' },
+  'client-gifts':        { icon: '🤝', gradient: 'from-amber-100 to-warm-300' },
+  'welcome-kits':        { icon: '🎒', gradient: 'from-warm-50 to-amber-200' },
+  'festive-hampers':     { icon: '🧧', gradient: 'from-amber-200 to-amber-400' },
+  'brand-candles':       { icon: '🏷️', gradient: 'from-warm-100 to-warm-300' },
+}
+const DEFAULT_DISPLAY = { icon: '🕯️', gradient: 'from-amber-100 to-amber-300' }
 
 interface CategoryTileProps {
   label: string
@@ -108,34 +99,47 @@ function SectionHeader({
 }
 
 export default function Home() {
-  const { products, isLoading } = useProducts({ limit: 12, status: 'active' })
+  const { categories } = useCategories()
+
+  const featuredCategoryId = categories.find((c) => c.slug === 'featured')?.id
+  const { products, isLoading } = useProducts({ limit: 20, status: 'active', categoryId: featuredCategoryId })
+
+  // Build category group sections dynamically (exclude Featured)
+  const groups = categories
+    .filter((c) => !c.parentId && c.slug !== 'featured')
+    .sort((a, b) => a.sortOrder - b.sortOrder)
+
+  const groupSections = groups.map((group) => ({
+    group,
+    items: categories
+      .filter((c) => c.parentId === group.id)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((cat) => ({
+        label: cat.name,
+        href: `/products?category=${cat.slug}`,
+        image: null,
+        ...(CATEGORY_DISPLAY[cat.slug] || DEFAULT_DISPLAY),
+      })),
+  })).filter((s) => s.items.length > 0)
 
   return (
     <div className={THEME.pageBg}>
       {/* Hero Section */}
       <section className="bg-warm-900 border-b border-warm-800">
         <div className="flex flex-col items-center justify-center text-center px-6 py-10 sm:py-12">
-
-          {/* Eyebrow */}
           <p className="mb-6 tracking-[0.35em] text-amber-500/80 text-xs sm:text-sm uppercase font-medium">
-            Hand-poured · Thoughtfully Crafted · Artisan
+            Handcrafted · Thoughtfully Curated · Artisan Made
           </p>
-
-          {/* Monogram */}
           <img
             src="/logo-monogram.png"
             alt="Wicks & Wax"
             className="w-44 sm:w-56 h-auto filter invert mix-blend-screen opacity-90"
           />
-
-          {/* Brand name */}
           <h1 className="font-serif font-semibold text-cream-100 mb-4 -mt-8" style={{ fontSize: 'clamp(1.8rem, 5vw, 3rem)', letterSpacing: '-0.01em' }}>
             Wicks &amp; Wax
           </h1>
-
-          {/* Tagline */}
-          <p className="max-w-sm text-warm-300 text-sm sm:text-base leading-relaxed">
-            Luxury candles crafted to fill your space with warmth, scent, and intention.
+          <p className="max-w-md text-warm-300 text-sm sm:text-base leading-relaxed">
+            Handcrafted luxury gifting experiences — from candles to curated hampers — made with warmth and intention.
           </p>
         </div>
       </section>
@@ -145,9 +149,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
           <SectionHeader title="Featured Candles" subtitle="Our most loved scents" viewAllHref="/products" />
           {isLoading ? (
-            <div className="flex justify-center py-12">
-              <Spinner size="lg" />
-            </div>
+            <div className="flex justify-center py-12"><Spinner size="lg" /></div>
           ) : (
             <Carousel itemWidth={260}>
               {products.map((product) => (
@@ -160,46 +162,24 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Shop by Category Carousel */}
-      <section className={`${THEME.sectionAlt} py-14`}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-          <SectionHeader title="Shop by Product" subtitle="Explore our full candle collection" viewAllHref="/products" />
-          <Carousel itemWidth={256}>
-            {SHOP_CATEGORIES.map((cat) => <CategoryTile key={cat.label} {...cat} />)}
-          </Carousel>
-        </div>
-      </section>
-
-      {/* Occasions Carousel */}
-      <section className={`${THEME.pageBg} py-14`}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-          <SectionHeader title="Shop by Occasion" subtitle="Find the perfect candle for every moment" viewAllHref="/products" />
-          <Carousel itemWidth={256}>
-            {OCCASIONS.map((occ) => <CategoryTile key={occ.label} {...occ} />)}
-          </Carousel>
-        </div>
-      </section>
-
-      {/* Wedding & Events Carousel */}
-      <section className={`${THEME.sectionAlt} py-14`}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-          <SectionHeader title="Wedding & Events" subtitle="Make every celebration unforgettable" viewAllHref="/products?occasion=wedding-favors" />
-          <Carousel itemWidth={256}>
-            {WEDDING_EVENTS.map((item) => <CategoryTile key={item.label} {...item} />)}
-          </Carousel>
-        </div>
-      </section>
-
-      {/* Corporate Gifting Carousel */}
-      <section className={`${THEME.pageBg} py-14`}>
-        <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
-          <SectionHeader title="Corporate Gifting" subtitle="Thoughtful candles that leave a lasting impression" viewAllHref="/products?occasion=corporate" />
-          <Carousel itemWidth={256}>
-            {CORPORATE.map((item) => <CategoryTile key={item.label} {...item} />)}
-          </Carousel>
-        </div>
-      </section>
-
+      {/* Dynamic category group carousels */}
+      {groupSections.map((section, i) => (
+        <section
+          key={section.group.id}
+          className={`${i % 2 === 0 ? THEME.sectionAlt : THEME.pageBg} py-14`}
+        >
+          <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
+            <SectionHeader
+              title={section.group.name}
+              subtitle={section.group.description}
+              viewAllHref={`/products?category=${section.items[0]?.href.split('=')[1] ?? ''}`}
+            />
+            <Carousel itemWidth={256}>
+              {section.items.map((cat) => <CategoryTile key={cat.label} {...cat} />)}
+            </Carousel>
+          </div>
+        </section>
+      ))}
     </div>
   )
 }

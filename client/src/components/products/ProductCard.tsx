@@ -59,11 +59,16 @@ export default function ProductCard({ product }: ProductCardProps) {
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
         {/* Categories */}
-        {product.categories.length > 0 && (
-          <p className="text-xs text-amber-600 font-medium mb-1">
-            {[...new Set(product.categories.map((c) => SLUG_TO_GROUP[c.category.slug] || c.category.name))].join(', ')}
-          </p>
-        )}
+        {product.categories.length > 0 && (() => {
+          const labels = [...new Set(
+            product.categories
+              .map((c) => SLUG_TO_GROUP[c.category.slug] || c.category.name)
+              .filter((label) => label !== 'featured')
+          )]
+          return labels.length > 0 ? (
+            <p className="text-xs text-amber-600 font-medium mb-1">{labels.join(', ')}</p>
+          ) : null
+        })()}
 
         {/* Name */}
         <h3 className="font-serif text-lg font-medium text-warm-900 group-hover:text-amber-700 transition-colors">

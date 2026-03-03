@@ -144,6 +144,23 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Marquee Banner */}
+      <div className="bg-amber-500 overflow-hidden py-3 border-y border-amber-600">
+        <style>{`
+          @keyframes marquee { from { transform: translateX(0) } to { transform: translateX(-50%) } }
+          .marquee-track { display: flex; width: max-content; animation: marquee 20s linear infinite; }
+        `}</style>
+        <div className="marquee-track">
+          {[...Array(2)].map((_, i) => (
+            <span key={i} className="shrink-0 px-16 text-white text-sm font-semibold tracking-wide whitespace-nowrap">
+              ✦ For bulk orders &amp; custom candles, WhatsApp us at{' '}
+              <a href="https://wa.me/916361019528" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-amber-100">+91 63610 19528</a>
+              {' '}— we'd love to craft something special for you &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+            </span>
+          ))}
+        </div>
+      </div>
+
       {/* Featured Products Carousel */}
       <section className={`${THEME.pageBg} py-14`}>
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">

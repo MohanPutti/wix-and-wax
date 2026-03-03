@@ -14,14 +14,7 @@ import { selectUser, selectIsAuthenticated, selectIsAdmin, logoutUser } from '..
 import { selectItemCount, toggleCart } from '../../store/slices/cartSlice'
 import { useCategories } from '../../hooks/useProducts'
 
-const WHATSAPP_URL = 'https://wa.me/918368680057'
-
-const CUSTOMIZE_ITEMS = [
-  { label: 'Bulk Orders', href: WHATSAPP_URL },
-  { label: 'Personalized Candles', href: WHATSAPP_URL },
-  { label: 'Custom Fragrances', href: WHATSAPP_URL },
-  { label: 'Packaging Options', href: WHATSAPP_URL },
-]
+const WHATSAPP_URL = 'https://wa.me/916361019528'
 
 interface DropdownMenuProps {
   items: { label: string; href: string }[]
@@ -29,7 +22,7 @@ interface DropdownMenuProps {
 
 function DropdownMenu({ items }: DropdownMenuProps) {
   return (
-    <div className="absolute top-full left-1/2 -translate-x-1/2 mt-1 bg-white border border-warm-100 rounded-xl shadow-soft min-w-[200px] py-2 z-50 animate-fade-in">
+    <div className="absolute top-full left-0 mt-1 bg-white border border-warm-100 rounded-xl shadow-soft min-w-[200px] py-2 z-50">
       {items.map((item) => (
         <Link
           key={item.href}
@@ -67,7 +60,6 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openMobileSection, setOpenMobileSection] = useState<string | null>(null)
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null)
-  const [isCustomizeOpen, setIsCustomizeOpen] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const handleDropdownEnter = (label: string) => {
@@ -81,16 +73,6 @@ export default function Header() {
     }, 150)
   }
 
-  const handleCustomizeEnter = () => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    setIsCustomizeOpen(true)
-  }
-
-  const handleCustomizeLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsCustomizeOpen(false)
-    }, 150)
-  }
 
   useEffect(() => {
     return () => {
@@ -149,37 +131,16 @@ export default function Header() {
               </div>
             ))}
 
-            {/* Customize Your Order — gold CTA */}
-            <div
-              className="relative"
-              onMouseEnter={handleCustomizeEnter}
-              onMouseLeave={handleCustomizeLeave}
+            {/* Customize Your Order — direct WhatsApp link */}
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1.5 ml-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold tracking-wide rounded-full transition-all duration-200 shadow-warm hover:shadow-lg"
             >
-              <button className="flex items-center gap-1.5 ml-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold tracking-wide rounded-full transition-all duration-200 shadow-warm hover:shadow-lg">
-                <SparklesIcon className="h-3.5 w-3.5" />
-                CUSTOMIZE YOUR ORDER
-                <ChevronDownIcon
-                  className={`h-3 w-3 transition-transform duration-200 ${
-                    isCustomizeOpen ? 'rotate-180' : ''
-                  }`}
-                />
-              </button>
-              {isCustomizeOpen && (
-                <div className="absolute top-full right-0 mt-1 bg-white border border-amber-200 rounded-xl shadow-warm min-w-[210px] py-2 z-50 animate-fade-in">
-                  {CUSTOMIZE_ITEMS.map((item) => (
-                    <a
-                      key={item.label}
-                      href={item.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block px-5 py-2.5 text-sm text-warm-700 hover:bg-amber-50 hover:text-amber-700 transition-colors whitespace-nowrap"
-                    >
-                      {item.label}
-                    </a>
-                  ))}
-                </div>
-              )}
-            </div>
+              <SparklesIcon className="h-3.5 w-3.5" />
+              CUSTOMIZE YOUR ORDER
+            </a>
           </nav>
 
           {/* Right Actions */}
@@ -277,38 +238,19 @@ export default function Header() {
             </div>
           ))}
 
+
           {/* Customize CTA */}
           <div className="border-b border-warm-100">
-            <button
-              onClick={() => toggleMobileSection('CUSTOMIZE')}
-              className="flex items-center justify-between w-full px-6 py-4 text-sm font-bold tracking-wide text-amber-700 hover:bg-amber-50 transition-colors"
+            <a
+              href={WHATSAPP_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 w-full px-6 py-4 text-sm font-bold tracking-wide text-amber-700 hover:bg-amber-50 transition-colors"
+              onClick={() => setIsMobileMenuOpen(false)}
             >
-              <span className="flex items-center gap-2">
-                <SparklesIcon className="h-4 w-4" />
-                CUSTOMIZE YOUR ORDER
-              </span>
-              <ChevronDownIcon
-                className={`h-4 w-4 transition-transform duration-200 ${
-                  openMobileSection === 'CUSTOMIZE' ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-            {openMobileSection === 'CUSTOMIZE' && (
-              <div className="bg-amber-50 pb-2">
-                {CUSTOMIZE_ITEMS.map((item) => (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block px-10 py-2.5 text-sm text-amber-700 hover:text-amber-900 hover:bg-amber-100 transition-colors"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    {item.label}
-                  </a>
-                ))}
-              </div>
-            )}
+              <SparklesIcon className="h-4 w-4" />
+              CUSTOMIZE YOUR ORDER
+            </a>
           </div>
 
           {/* Auth Links */}

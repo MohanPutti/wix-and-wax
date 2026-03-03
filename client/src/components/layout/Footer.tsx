@@ -1,4 +1,4 @@
-const WHATSAPP_URL = 'https://wa.me/918368680057'
+const WHATSAPP_URL = 'https://wa.me/916361019528'
 
 export default function Footer() {
   return (

@@ -57,25 +57,37 @@ export default function ProductDetail() {
   const currentVariant = selectedVariant || product.variants[0]
   const mainImage = product.images[selectedImageIndex]?.url || '/placeholder-candle.jpg'
 
-  const price = Number(currentVariant.price)
-  const mrp = currentVariant.comparePrice ? Number(currentVariant.comparePrice) : null
-  const hasDiscount = mrp !== null && mrp > price
-  const discountPct = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0
+  const basePrice = Number(currentVariant.price)
 
   const meta = product.metadata as ProductMetadata & {
     baseMode?: string
     colorMode?: string
     fragranceMode?: string
     packaging?: string[]
+    packagingPrices?: Record<string, number>
     packagingMode?: string
   } | undefined
   const fragrances = meta?.fragrances?.filter(Boolean) || []
   const colors = meta?.colors?.filter(Boolean) || []
   const packaging = meta?.packaging?.filter(Boolean) || []
+  const packagingPrices = meta?.packagingPrices || {}
   const baseMode = meta?.baseMode || 'single'
   const colorMode = meta?.colorMode || 'none'
   const fragranceMode = meta?.fragranceMode || 'none'
   const packagingMode = meta?.packagingMode || 'none'
+
+  // Case 2: packaging-only product (variants have options.packaging, no options.base)
+  const isPackagingOnly = product.variants.length > 0 &&
+    product.variants.every((v) => v.options?.packaging && !v.options?.base)
+
+  // Case 1 add-on: sum prices of selected packaging options
+  const packagingAddon = !isPackagingOnly && selectedPackagingList.length > 0
+    ? selectedPackagingList.reduce((sum, name) => sum + (Number(packagingPrices[name]) || 0), 0)
+    : 0
+  const price = basePrice + packagingAddon
+  const mrp = currentVariant.comparePrice ? Number(currentVariant.comparePrice) : null
+  const hasDiscount = mrp !== null && mrp > basePrice
+  const discountPct = hasDiscount ? Math.round(((mrp! - basePrice) / mrp!) * 100) : 0
 
   // Multi-base support: get unique base names from variants
   const uniqueBases = [...new Set(
@@ -330,18 +342,19 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {/* Packaging */}
-          {packaging.length > 0 && (
+          {/* Packaging add-on (Case 1 only — Case 2 handled by variant selector above) */}
+          {!isPackagingOnly && packaging.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-warm-700 mb-2">
                 Packaging{packagingMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
               </p>
               <div className="flex flex-wrap gap-2">
                 {packaging.map((p) => {
+                  const addonPrice = Number(packagingPrices[p]) || 0
                   if (packagingMode === 'none') {
                     return (
                       <span key={p} className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200">
-                        {p}
+                        {p}{addonPrice > 0 && <span className="ml-1 text-warm-500">+₹{addonPrice}</span>}
                       </span>
                     )
                   }
@@ -357,17 +370,22 @@ export default function ProductDetail() {
                         }
                         setSelectionError('')
                       }}
-                      className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
+                      className={`text-sm px-3 py-1.5 rounded-full border-2 transition-colors ${
                         isSelected
                           ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
                           : 'border-warm-200 text-warm-700 hover:border-amber-300'
                       }`}
                     >
-                      {p}
+                      {p}{addonPrice > 0 && <span className={`ml-1.5 text-xs ${isSelected ? 'text-amber-600' : 'text-warm-400'}`}>+₹{addonPrice}</span>}
                     </button>
                   )
                 })}
               </div>
+              {packagingAddon > 0 && (
+                <p className="text-xs text-amber-700 mt-2">
+                  Packaging add-on: +₹{packagingAddon} → Total: ₹{price.toFixed(0)}
+                </p>
+              )}
             </div>
           )}
 
@@ -375,52 +393,80 @@ export default function ProductDetail() {
             <p className="text-sm text-red-500 mb-4">{selectionError}</p>
           )}
 
-          {/* Base picker (only shown if multiple bases and mode is not 'none') */}
-          {hasMultipleBases && baseMode !== 'none' && (
-            <div className="mb-5">
-              <p className="text-sm font-medium text-warm-700 mb-2">
-                Base{baseMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
-              </p>
+          {/* Case 2: Packaging-only variant selector */}
+          {isPackagingOnly && product.variants.length > 0 && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-warm-700 mb-2">
+                Packaging<span className="text-red-500 ml-0.5">*</span>
+              </label>
               <div className="flex flex-wrap gap-2">
-                {uniqueBases.map((base) => (
+                {product.variants.map((variant) => (
                   <button
-                    key={base}
-                    onClick={() => handleBaseSelect(base)}
+                    key={variant.id}
+                    onClick={() => setSelectedVariant(variant)}
                     className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
-                      selectedBaseName === base
+                      currentVariant.id === variant.id
                         ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
                         : 'border-warm-200 hover:border-warm-300 text-warm-700'
                     }`}
                   >
-                    {base}
+                    {variant.options?.packaging || variant.name}
+                    <span className="ml-1.5 text-warm-500">₹{Number(variant.price).toFixed(0)}</span>
                   </button>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Variant (Size) Selection */}
-          {baseVariants.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-warm-700 mb-2">
-                Size
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {baseVariants.map((variant) => (
-                  <button
-                    key={variant.id}
-                    onClick={() => setSelectedVariant(variant)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
-                      currentVariant.id === variant.id
-                        ? 'border-amber-600 bg-amber-50 text-amber-700'
-                        : 'border-warm-200 hover:border-warm-300 text-warm-700'
-                    }`}
-                  >
-                    {variant.options?.size || variant.name}
-                  </button>
-                ))}
-              </div>
-            </div>
+          {/* Case 1: Base picker + Size picker */}
+          {!isPackagingOnly && (
+            <>
+              {/* Base picker (only shown if multiple bases and mode is not 'none') */}
+              {hasMultipleBases && baseMode !== 'none' && (
+                <div className="mb-5">
+                  <p className="text-sm font-medium text-warm-700 mb-2">
+                    Base<span className="text-red-500 ml-0.5">*</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueBases.map((base) => (
+                      <button
+                        key={base}
+                        onClick={() => handleBaseSelect(base)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                          selectedBaseName === base
+                            ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
+                            : 'border-warm-200 hover:border-warm-300 text-warm-700'
+                        }`}
+                      >
+                        {base}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Size picker */}
+              {baseVariants.length > 0 && (
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-warm-700 mb-2">Size</label>
+                  <div className="flex flex-wrap gap-2">
+                    {baseVariants.map((variant) => (
+                      <button
+                        key={variant.id}
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                          currentVariant.id === variant.id
+                            ? 'border-amber-600 bg-amber-50 text-amber-700'
+                            : 'border-warm-200 hover:border-warm-300 text-warm-700'
+                        }`}
+                      >
+                        {variant.options?.size || variant.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {/* Quantity */}

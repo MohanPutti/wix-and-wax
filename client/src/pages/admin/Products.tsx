@@ -457,6 +457,8 @@ export function AdminProductForm() {
   const [selectedFragrances, setSelectedFragrances] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
   const [selectedPackaging, setSelectedPackaging] = useState<string[]>([])
+  const [packagingPrices, setPackagingPrices] = useState<Record<string, string>>({})
+  const [packagingStock, setPackagingStock] = useState<Record<string, string>>({})
   const [baseMode, setBaseMode] = useState<SelectionMode>('single')
   const [fragranceMode, setFragranceMode] = useState<SelectionMode>('none')
   const [colorMode, setColorMode] = useState<SelectionMode>('none')
@@ -489,6 +491,7 @@ export function AdminProductForm() {
         fragrances?: string[]
         colors?: string[]
         packaging?: string[]
+        packagingPrices?: Record<string, string>
         baseMode?: SelectionMode
         fragranceMode?: SelectionMode
         colorMode?: SelectionMode
@@ -496,13 +499,38 @@ export function AdminProductForm() {
       } | undefined
       setSelectedFragrances(meta?.fragrances || [])
       setSelectedColors(meta?.colors || [])
-      setSelectedPackaging(meta?.packaging || [])
       setBaseMode(meta?.baseMode || 'single')
       setFragranceMode(meta?.fragranceMode || 'none')
       setColorMode(meta?.colorMode || 'none')
       setPackagingMode(meta?.packagingMode || 'none')
 
-      if (product.variants.length > 0) {
+      // Detect Case 2 (packaging-only): variants have options.packaging but no options.base
+      const isPackagingOnly = product.variants.length > 0 &&
+        product.variants.every((v) => v.options?.packaging && !v.options?.base)
+
+      if (isPackagingOnly) {
+        // Restore packaging names, prices, stock from variants
+        const pkgNames: string[] = []
+        const prices: Record<string, string> = {}
+        const stock: Record<string, string> = {}
+        for (const v of product.variants) {
+          const name = v.options?.packaging
+          if (name) {
+            pkgNames.push(name)
+            prices[name] = String(v.price)
+            stock[name] = String(v.quantity)
+          }
+        }
+        setSelectedPackaging(pkgNames)
+        setPackagingPrices(prices)
+        setPackagingStock(stock)
+      } else {
+        // Case 1 or base-only: packaging from metadata
+        setSelectedPackaging(meta?.packaging || [])
+        setPackagingPrices(meta?.packagingPrices || {})
+      }
+
+      if (!isPackagingOnly && product.variants.length > 0) {
         // Get unique base names from variants
         const baseNames = [...new Set(
           product.variants.map((v) => v.options?.base).filter(Boolean) as string[]
@@ -571,27 +599,37 @@ export function AdminProductForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (selectedBases.length === 0) {
-      setError('Please select at least one base (e.g. Jar, Bowl, Tealight).')
-      return
-    }
-
-    const allEnabledSizes = selectedBases.flatMap((base) =>
-      Object.values(baseSizeMaps[base.name] || {}).filter((e) => e.enabled)
-    )
-    if (allEnabledSizes.length === 0) {
-      setError('Please enable at least one size.')
-      return
-    }
-
     setIsSubmitting(true)
     setError('')
 
     try {
-      const newVariants = selectedBases.flatMap((base) =>
-        sizesToVariants(baseSizeMaps[base.name] || {}, base.name, slug)
-      )
-      const metadata = { fragrances: selectedFragrances, colors: selectedColors, packaging: selectedPackaging, baseMode, fragranceMode, colorMode, packagingMode }
+      // Case 2: no base selected → packaging options generate variants
+      const isPackagingOnly = selectedBases.length === 0 && selectedPackaging.length > 0
+      const newVariants = isPackagingOnly
+        ? selectedPackaging.map((name, i) => ({
+            name,
+            sku: `${slug.toUpperCase().replace(/-/g, '_')}_${name.toUpperCase().replace(/\s+/g, '_')}`,
+            price: parseFloat(packagingPrices[name]) || 0,
+            comparePrice: undefined,
+            quantity: parseInt(packagingStock[name]) || 0,
+            isDefault: i === 0,
+            options: { packaging: name },
+          }))
+        : selectedBases.flatMap((base) =>
+            sizesToVariants(baseSizeMaps[base.name] || {}, base.name, slug)
+          )
+
+      // Case 1: store packaging add-on prices in metadata
+      const metadata = {
+        fragrances: selectedFragrances,
+        colors: selectedColors,
+        packaging: isPackagingOnly ? undefined : selectedPackaging,
+        packagingPrices: !isPackagingOnly && selectedPackaging.length > 0 ? packagingPrices : undefined,
+        baseMode,
+        fragranceMode,
+        colorMode,
+        packagingMode,
+      }
 
       if (isEditMode && id) {
         await api.updateProduct(id, {
@@ -780,7 +818,7 @@ export function AdminProductForm() {
 
               {/* Base multi-select checkboxes */}
               <div className="mb-6">
-                <label className="block text-sm font-medium text-warm-700 mb-2">Bases *</label>
+                <label className="block text-sm font-medium text-warm-700 mb-2">Bases</label>
                 {bases.length === 0 ? (
                   <p className="text-sm text-warm-400 italic">No bases available.</p>
                 ) : (
@@ -910,7 +948,7 @@ export function AdminProductForm() {
               })}
 
               {selectedBases.length === 0 && bases.length > 0 && (
-                <p className="text-sm text-warm-400 italic mt-2">Select a base above to configure sizes.</p>
+                <p className="text-sm text-warm-400 italic mt-2">Optionally select a base to configure sizes and variants.</p>
               )}
 
               {totalEnabledSizeCount > 0 && (
@@ -923,7 +961,11 @@ export function AdminProductForm() {
             {/* Packaging */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
               <h2 className="font-semibold text-warm-900 mb-1">Packaging</h2>
-              <p className="text-sm text-warm-500 mb-4">Select packaging options available for this product and how customers choose them.</p>
+              <p className="text-sm text-warm-500 mb-4">
+                {selectedBases.length === 0
+                  ? 'No base selected — each packaging option becomes a purchasable variant with its own price and stock.'
+                  : 'Optional add-on packaging for this product. Set the extra cost per packaging type.'}
+              </p>
               <MultiSelectChips
                 label="Available Packaging"
                 all={packagingList}
@@ -933,6 +975,52 @@ export function AdminProductForm() {
                 mode={packagingMode}
                 onModeChange={setPackagingMode}
               />
+
+              {/* Price / stock fields per selected packaging */}
+              {selectedPackaging.length > 0 && (
+                <div className="mt-5 space-y-3">
+                  <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider">
+                    {selectedBases.length === 0 ? 'Pricing & Stock per Packaging' : 'Add-on Price per Packaging'}
+                  </p>
+                  {selectedPackaging.map((name) => (
+                    <div key={name} className={`rounded-xl border-2 border-warm-200 px-4 py-3 ${selectedBases.length === 0 ? 'grid grid-cols-3 gap-3 items-end' : 'flex items-center gap-4'}`}>
+                      <span className="text-sm font-medium text-warm-900 col-span-1">{name}</span>
+                      {selectedBases.length === 0 ? (
+                        <>
+                          <div>
+                            <label className="block text-xs font-medium text-warm-600 mb-1">Price (₹)</label>
+                            <input
+                              type="number" min="0" step="1" placeholder="e.g. 299"
+                              value={packagingPrices[name] || ''}
+                              onChange={(e) => setPackagingPrices((prev) => ({ ...prev, [name]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-xs font-medium text-warm-600 mb-1">Stock (units)</label>
+                            <input
+                              type="number" min="0" step="1" placeholder="e.g. 50"
+                              value={packagingStock[name] || ''}
+                              onChange={(e) => setPackagingStock((prev) => ({ ...prev, [name]: e.target.value }))}
+                              className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <label className="text-xs font-medium text-warm-600 whitespace-nowrap">Add-on (₹)</label>
+                          <input
+                            type="number" min="0" step="1" placeholder="e.g. 50"
+                            value={packagingPrices[name] || ''}
+                            onChange={(e) => setPackagingPrices((prev) => ({ ...prev, [name]: e.target.value }))}
+                            className="w-28 px-3 py-1.5 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

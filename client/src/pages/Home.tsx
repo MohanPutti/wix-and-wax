@@ -117,7 +117,7 @@ export default function Home() {
       .map((cat) => ({
         label: cat.name,
         href: `/products?category=${cat.slug}`,
-        image: null,
+        image: cat.image || null,
         ...(CATEGORY_DISPLAY[cat.slug] || DEFAULT_DISPLAY),
       })),
   })).filter((s) => s.items.length > 0)

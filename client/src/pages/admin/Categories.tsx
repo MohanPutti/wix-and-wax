@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { PencilIcon, TrashIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { useState, useRef } from 'react'
+import { PencilIcon, TrashIcon, PlusIcon, PhotoIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useCategories } from '../../hooks/useProducts'
 import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
@@ -7,14 +7,27 @@ import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
 import type { Category } from '../../types'
 
-const MAIN_GROUPS = ['Shop', 'Occasions', 'Wedding & Events', 'Corporate']
-
 export default function AdminCategories() {
   const { categories, isLoading, refresh } = useCategories()
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [formData, setFormData] = useState({ name: '', slug: '', description: '', group: '' })
+  const [imageUrl, setImageUrl] = useState<string>('')
+  const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleImageUpload = async (file: File) => {
+    setIsUploadingImage(true)
+    try {
+      const res = await api.uploadImage(file)
+      if (res.success) setImageUrl(res.data.url)
+    } catch {
+      alert('Image upload failed')
+    } finally {
+      setIsUploadingImage(false)
+    }
+  }
 
   const handleNameChange = (name: string) => {
     setFormData({
@@ -35,6 +48,7 @@ export default function AdminCategories() {
       name: formData.name,
       slug: formData.slug,
       description: formData.description || undefined,
+      image: imageUrl || undefined,
       parentId: parentCat?.id || undefined,
     }
 
@@ -45,6 +59,7 @@ export default function AdminCategories() {
         await api.createCategory(payload)
       }
       setFormData({ name: '', slug: '', description: '', group: '' })
+      setImageUrl('')
       setIsAdding(false)
       setEditingId(null)
       refresh()
@@ -64,6 +79,7 @@ export default function AdminCategories() {
       description: category.description || '',
       group: parent?.name || '',
     })
+    setImageUrl(category.image || '')
     setIsAdding(true)
   }
 
@@ -81,6 +97,7 @@ export default function AdminCategories() {
     setIsAdding(false)
     setEditingId(null)
     setFormData({ name: '', slug: '', description: '', group: '' })
+    setImageUrl('')
   }
 
   const getGroupName = (cat: Category) => {
@@ -140,9 +157,9 @@ export default function AdminCategories() {
                 onChange={(e) => setFormData({ ...formData, group: e.target.value })}
                 className="w-full px-4 py-2.5 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-warm-900 bg-white"
               >
-                <option value="">None</option>
-                {MAIN_GROUPS.map((g) => (
-                  <option key={g} value={g}>{g}</option>
+                <option value="">None (Top-level group)</option>
+                {categories.filter((c) => !c.parentId).map((g) => (
+                  <option key={g.id} value={g.name}>{g.name}</option>
                 ))}
               </select>
             </div>
@@ -156,6 +173,46 @@ export default function AdminCategories() {
                 className="w-full px-4 py-2.5 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
             </div>
+            {/* Image upload — only for sub-categories */}
+            {formData.group && <div>
+              <label className="block text-sm font-medium text-warm-700 mb-2">Category Image</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(e.target.files[0]) }}
+              />
+              {imageUrl ? (
+                <div className="relative inline-block">
+                  <img src={imageUrl} alt="Category" className="w-32 h-32 object-cover rounded-xl border border-warm-200" />
+                  <button
+                    type="button"
+                    onClick={() => setImageUrl('')}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                  >
+                    <XMarkIcon className="h-3.5 w-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-2 py-1 rounded-lg hover:bg-black/70"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingImage}
+                  className="flex flex-col items-center justify-center w-32 h-32 border-2 border-dashed border-warm-300 rounded-xl text-warm-400 hover:border-amber-400 hover:text-amber-500 transition-colors"
+                >
+                  {isUploadingImage ? <Spinner size="sm" /> : <><PhotoIcon className="h-8 w-8 mb-1" /><span className="text-xs">Add Image</span></>}
+                </button>
+              )}
+            </div>}
+
             <div className="flex gap-4">
               <Button type="submit" isLoading={isSubmitting}>
                 {editingId ? 'Update' : 'Create'} Category
@@ -184,7 +241,15 @@ export default function AdminCategories() {
             <tbody>
               {categories.map((category) => (
                 <tr key={category.id} className="border-b border-warm-100 hover:bg-warm-50">
-                  <td className="px-6 py-4 font-medium text-warm-900">{category.name}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      {category.image
+                        ? <img src={category.image} alt={category.name} className="w-9 h-9 rounded-lg object-cover border border-warm-200 flex-shrink-0" />
+                        : <div className="w-9 h-9 rounded-lg bg-warm-100 flex-shrink-0" />
+                      }
+                      <span className="font-medium text-warm-900">{category.name}</span>
+                    </div>
+                  </td>
                   <td className="px-6 py-4">
                     {getGroupName(category) !== '—' ? (
                       <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-1 rounded-full">

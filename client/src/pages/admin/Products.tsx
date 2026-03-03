@@ -9,7 +9,7 @@ import Spinner from '../../components/ui/Spinner'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import ImageUpload from '../../components/admin/ImageUpload'
-import type { ProductVariant, ProductBase, Fragrance, Color } from '../../types'
+import type { ProductVariant, ProductBase, Fragrance, Color, Packaging } from '../../types'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning'> = {
   draft: 'default',
@@ -447,21 +447,29 @@ export function AdminProductForm() {
   const [bases, setBases] = useState<ProductBase[]>([])
   const [fragrances, setFragrances] = useState<Fragrance[]>([])
   const [colors, setColors] = useState<Color[]>([])
+  const [packagingList, setPackagingList] = useState<Packaging[]>([])
 
-  const [selectedBase, setSelectedBase] = useState<ProductBase | null>(null)
-  const [sizeMap, setSizeMap] = useState<Record<string, SizeEntry>>({})
+  // Multi-base: array of selected bases + per-base size maps (keyed by base name)
+  const [selectedBases, setSelectedBases] = useState<ProductBase[]>([])
+  const [baseSizeMaps, setBaseSizeMaps] = useState<Record<string, Record<string, SizeEntry>>>({})
+  const [pendingBaseNames, setPendingBaseNames] = useState<string[]>([])
+
   const [selectedFragrances, setSelectedFragrances] = useState<string[]>([])
   const [selectedColors, setSelectedColors] = useState<string[]>([])
+  const [selectedPackaging, setSelectedPackaging] = useState<string[]>([])
+  const [baseMode, setBaseMode] = useState<SelectionMode>('single')
   const [fragranceMode, setFragranceMode] = useState<SelectionMode>('none')
   const [colorMode, setColorMode] = useState<SelectionMode>('none')
+  const [packagingMode, setPackagingMode] = useState<SelectionMode>('none')
 
-  // Load catalog data
+  // Load catalog data — use allSettled so one failure doesn't wipe the rest
   useEffect(() => {
-    Promise.all([api.getBases(), api.getFragrances(), api.getColors()]).then(
-      ([b, f, c]) => {
-        if (b.success) setBases(b.data)
-        if (f.success) setFragrances(f.data)
-        if (c.success) setColors(c.data)
+    Promise.allSettled([api.getBases(), api.getFragrances(), api.getColors(), api.getPackaging()]).then(
+      ([b, f, c, p]) => {
+        if (b.status === 'fulfilled' && b.value.success) setBases(b.value.data)
+        if (f.status === 'fulfilled' && f.value.success) setFragrances(f.value.data)
+        if (c.status === 'fulfilled' && c.value.success) setColors(c.value.data)
+        if (p.status === 'fulfilled' && p.value.success) setPackagingList(p.value.data)
       }
     )
   }, [])
@@ -477,45 +485,66 @@ export function AdminProductForm() {
       setSelectedCategories(catIds)
       setImages(product.images?.map((img) => img.url) || [])
 
-      const meta = product.metadata as { fragrances?: string[]; colors?: string[]; fragranceMode?: SelectionMode; colorMode?: SelectionMode } | undefined
+      const meta = product.metadata as {
+        fragrances?: string[]
+        colors?: string[]
+        packaging?: string[]
+        baseMode?: SelectionMode
+        fragranceMode?: SelectionMode
+        colorMode?: SelectionMode
+        packagingMode?: SelectionMode
+      } | undefined
       setSelectedFragrances(meta?.fragrances || [])
       setSelectedColors(meta?.colors || [])
+      setSelectedPackaging(meta?.packaging || [])
+      setBaseMode(meta?.baseMode || 'single')
       setFragranceMode(meta?.fragranceMode || 'none')
       setColorMode(meta?.colorMode || 'none')
+      setPackagingMode(meta?.packagingMode || 'none')
 
       if (product.variants.length > 0) {
-        // Restore base from first variant options
-        const firstBase = product.variants[0]?.options?.base
-        setSizeMap(variantsToSizeMap(product.variants))
-        // selectedBase will be resolved once bases load
-        if (firstBase) {
-          setBases((prev) => {
-            const found = prev.find((b) => b.name === firstBase)
-            if (found) setSelectedBase(found)
-            return prev
-          })
-          // Also set after bases load via an additional effect
-          setSelectedBase({ id: '', name: firstBase, sizes: product.variants.map((v) => v.options?.size || '') })
+        // Get unique base names from variants
+        const baseNames = [...new Set(
+          product.variants.map((v) => v.options?.base).filter(Boolean) as string[]
+        )]
+        // Build per-base size maps (keyed by base name)
+        const maps: Record<string, Record<string, SizeEntry>> = {}
+        for (const baseName of baseNames) {
+          const baseVariants = product.variants.filter((v) => v.options?.base === baseName)
+          maps[baseName] = variantsToSizeMap(baseVariants)
         }
+        setBaseSizeMaps(maps)
+        // Resolve selectedBases once bases catalog loads
+        setPendingBaseNames(baseNames)
       }
     }
   }, [isEditMode, product])
 
-  // When bases load, resolve the selectedBase name
+  // When bases catalog loads, resolve pendingBaseNames → selectedBases
   useEffect(() => {
-    if (bases.length > 0 && selectedBase) {
-      const found = bases.find((b) => b.name === selectedBase.name)
-      if (found) setSelectedBase(found)
+    if (bases.length > 0 && pendingBaseNames.length > 0) {
+      const resolved = pendingBaseNames
+        .map((name) => bases.find((b) => b.name === name))
+        .filter(Boolean) as ProductBase[]
+      if (resolved.length > 0) {
+        setSelectedBases(resolved)
+        setPendingBaseNames([])
+      }
     }
-  }, [bases])
+  }, [bases, pendingBaseNames])
 
-  const handleBaseChange = (baseId: string) => {
-    const base = bases.find((b) => b.id === baseId) || null
-    setSelectedBase(base)
-    if (base) {
-      setSizeMap(buildDefaultSizeMap(base.sizes))
+  const handleBaseToggle = (base: ProductBase) => {
+    const isSelected = selectedBases.some((b) => b.id === base.id)
+    if (isSelected) {
+      setSelectedBases((prev) => prev.filter((b) => b.id !== base.id))
+      setBaseSizeMaps((prev) => {
+        const next = { ...prev }
+        delete next[base.name]
+        return next
+      })
     } else {
-      setSizeMap({})
+      setSelectedBases((prev) => [...prev, base])
+      setBaseSizeMaps((prev) => ({ ...prev, [base.name]: buildDefaultSizeMap(base.sizes) }))
     }
   }
 
@@ -524,30 +553,33 @@ export function AdminProductForm() {
     setSlug(value.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))
   }
 
-  const updateSize = (size: string, field: keyof SizeEntry, value: string | boolean) => {
-    setSizeMap((prev) => ({ ...prev, [size]: { ...prev[size], [field]: value } }))
+  const updateSize = (baseName: string, size: string, field: keyof SizeEntry, value: string | boolean) => {
+    setBaseSizeMaps((prev) => ({
+      ...prev,
+      [baseName]: { ...prev[baseName], [size]: { ...prev[baseName]?.[size], [field]: value } },
+    }))
   }
 
-  const setDefaultSize = (size: string) => {
-    setSizeMap((prev) => {
-      const next = { ...prev }
-      Object.keys(next).forEach((k) => {
-        next[k] = { ...next[k], isDefault: k === size }
-      })
-      return next
+  const setDefaultSize = (baseName: string, size: string) => {
+    setBaseSizeMaps((prev) => {
+      const map = { ...prev[baseName] }
+      Object.keys(map).forEach((k) => { map[k] = { ...map[k], isDefault: k === size } })
+      return { ...prev, [baseName]: map }
     })
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    if (!selectedBase) {
-      setError('Please select a base (e.g. Jar, Bowl, Tealight).')
+    if (selectedBases.length === 0) {
+      setError('Please select at least one base (e.g. Jar, Bowl, Tealight).')
       return
     }
 
-    const enabledSizes = Object.entries(sizeMap).filter(([, e]) => e.enabled)
-    if (enabledSizes.length === 0) {
+    const allEnabledSizes = selectedBases.flatMap((base) =>
+      Object.values(baseSizeMaps[base.name] || {}).filter((e) => e.enabled)
+    )
+    if (allEnabledSizes.length === 0) {
       setError('Please enable at least one size.')
       return
     }
@@ -556,8 +588,10 @@ export function AdminProductForm() {
     setError('')
 
     try {
-      const newVariants = sizesToVariants(sizeMap, selectedBase.name, slug)
-      const metadata = { fragrances: selectedFragrances, colors: selectedColors, fragranceMode, colorMode }
+      const newVariants = selectedBases.flatMap((base) =>
+        sizesToVariants(baseSizeMaps[base.name] || {}, base.name, slug)
+      )
+      const metadata = { fragrances: selectedFragrances, colors: selectedColors, packaging: selectedPackaging, baseMode, fragranceMode, colorMode, packagingMode }
 
       if (isEditMode && id) {
         await api.updateProduct(id, {
@@ -626,7 +660,10 @@ export function AdminProductForm() {
     )
   }
 
-  const enabledSizeCount = Object.values(sizeMap).filter((e) => e.enabled).length
+  const totalEnabledSizeCount = selectedBases.reduce(
+    (sum, base) => sum + Object.values(baseSizeMaps[base.name] || {}).filter((e) => e.enabled).length,
+    0
+  )
 
   return (
     <div>
@@ -711,9 +748,9 @@ export function AdminProductForm() {
 
             {/* Base & Sizes */}
             <div className="bg-white rounded-xl p-6 shadow-soft">
-              <h2 className="font-semibold text-warm-900 mb-1">Base & Sizes</h2>
+              <h2 className="font-semibold text-warm-900 mb-1">Bases & Sizes</h2>
               <p className="text-sm text-warm-500 mb-5">
-                Choose the product base (e.g. Jar, Bowl, Tealight). Available sizes will appear based on your selection.
+                Select one or more bases (e.g. Jar, Bowl, Tealight). Configure sizes for each selected base.
                 {bases.length === 0 && (
                   <span className="ml-1 text-amber-600">
                     No bases configured —{' '}
@@ -722,122 +759,180 @@ export function AdminProductForm() {
                 )}
               </p>
 
-              {/* Base selector */}
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-warm-700 mb-1">Base *</label>
-                <select
-                  value={selectedBase?.id || ''}
-                  onChange={(e) => handleBaseChange(e.target.value)}
-                  required
-                  className="w-full px-4 py-2.5 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent bg-white"
-                >
-                  <option value="">Select a base…</option>
-                  {bases.map((b) => (
-                    <option key={b.id} value={b.id}>{b.name}</option>
-                  ))}
-                </select>
+              {/* Base selection mode */}
+              <div className="flex gap-3 mb-5">
+                {(['none', 'single', 'multi'] as SelectionMode[]).map((m) => (
+                  <label key={m} className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="base-mode"
+                      value={m}
+                      checked={baseMode === m}
+                      onChange={() => setBaseMode(m)}
+                      className="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span className="text-xs text-warm-600 capitalize">
+                      {m === 'none' ? 'Display only' : m === 'single' ? 'Single select' : 'Multi select'}
+                    </span>
+                  </label>
+                ))}
               </div>
 
-              {/* Size entries */}
-              {selectedBase && Object.keys(sizeMap).length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider">
-                    Sizes for {selectedBase.name}
-                    {enabledSizeCount > 0 && (
-                      <span className="ml-2 text-amber-600 normal-case tracking-normal font-medium">
-                        {enabledSizeCount} enabled
-                      </span>
-                    )}
-                  </p>
+              {/* Base multi-select checkboxes */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-warm-700 mb-2">Bases *</label>
+                {bases.length === 0 ? (
+                  <p className="text-sm text-warm-400 italic">No bases available.</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {bases.map((base) => {
+                      const isSelected = selectedBases.some((b) => b.id === base.id)
+                      return (
+                        <button
+                          key={base.id}
+                          type="button"
+                          onClick={() => handleBaseToggle(base)}
+                          className={`px-4 py-2 rounded-xl border-2 text-sm font-medium transition-colors ${
+                            isSelected
+                              ? 'border-amber-500 bg-amber-50 text-amber-800'
+                              : 'border-warm-200 bg-white text-warm-600 hover:border-warm-300'
+                          }`}
+                        >
+                          {base.name}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
 
-                  {(selectedBase.sizes || Object.keys(sizeMap)).map((size) => {
-                    const entry = sizeMap[size]
-                    if (!entry) return null
-                    return (
-                      <div
-                        key={size}
-                        className={`rounded-xl border-2 transition-colors ${
-                          entry.enabled ? 'border-amber-300 bg-amber-50/40' : 'border-warm-200 bg-warm-50/30'
-                        }`}
-                      >
-                        {/* Size header row */}
-                        <div className="flex items-center gap-3 px-4 py-3">
-                          <input
-                            type="checkbox"
-                            id={`size-${size}`}
-                            checked={entry.enabled}
-                            onChange={(e) => updateSize(size, 'enabled', e.target.checked)}
-                            className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
-                          />
-                          <label htmlFor={`size-${size}`} className="flex-1 cursor-pointer">
-                            <span className="font-medium text-warm-900">{size}</span>
-                          </label>
-                          {entry.enabled && (
-                            <button
-                              type="button"
-                              onClick={() => setDefaultSize(size)}
-                              className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
-                                entry.isDefault
-                                  ? 'bg-amber-500 text-white'
-                                  : 'bg-warm-200 text-warm-600 hover:bg-amber-100 hover:text-amber-700'
-                              }`}
-                            >
-                              {entry.isDefault ? 'Default' : 'Set default'}
-                            </button>
-                          )}
-                        </div>
-
-                        {/* MRP, Price & Stock */}
-                        {entry.enabled && (
-                          <div className="grid grid-cols-3 gap-3 px-4 pb-4">
-                            <div>
-                              <label className="block text-xs font-medium text-warm-600 mb-1">
-                                MRP (₹)
-                                <span className="ml-1 text-warm-400 font-normal">(optional)</span>
+              {/* Size entries per selected base */}
+              {selectedBases.map((base) => {
+                const sizeMap = baseSizeMaps[base.name] || {}
+                const enabledCount = Object.values(sizeMap).filter((e) => e.enabled).length
+                return (
+                  <div key={base.id} className="mb-6 last:mb-0">
+                    <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider mb-3">
+                      Sizes for {base.name}
+                      {enabledCount > 0 && (
+                        <span className="ml-2 text-amber-600 normal-case tracking-normal font-medium">
+                          {enabledCount} enabled
+                        </span>
+                      )}
+                    </p>
+                    <div className="space-y-3">
+                      {(base.sizes || Object.keys(sizeMap)).map((size) => {
+                        const entry = sizeMap[size]
+                        if (!entry) return null
+                        return (
+                          <div
+                            key={size}
+                            className={`rounded-xl border-2 transition-colors ${
+                              entry.enabled ? 'border-amber-300 bg-amber-50/40' : 'border-warm-200 bg-warm-50/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3 px-4 py-3">
+                              <input
+                                type="checkbox"
+                                id={`size-${base.name}-${size}`}
+                                checked={entry.enabled}
+                                onChange={(e) => updateSize(base.name, size, 'enabled', e.target.checked)}
+                                className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
+                              />
+                              <label htmlFor={`size-${base.name}-${size}`} className="flex-1 cursor-pointer">
+                                <span className="font-medium text-warm-900">{size}</span>
                               </label>
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                placeholder="e.g. 499"
-                                value={entry.mrp}
-                                onChange={(e) => updateSize(size, 'mrp', e.target.value)}
-                                className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                              />
+                              {entry.enabled && (
+                                <button
+                                  type="button"
+                                  onClick={() => setDefaultSize(base.name, size)}
+                                  className={`text-xs px-2.5 py-1 rounded-full font-medium transition-colors ${
+                                    entry.isDefault
+                                      ? 'bg-amber-500 text-white'
+                                      : 'bg-warm-200 text-warm-600 hover:bg-amber-100 hover:text-amber-700'
+                                  }`}
+                                >
+                                  {entry.isDefault ? 'Default' : 'Set default'}
+                                </button>
+                              )}
                             </div>
-                            <div>
-                              <label className="block text-xs font-medium text-warm-600 mb-1">Selling Price (₹)</label>
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                placeholder="e.g. 349"
-                                value={entry.price}
-                                onChange={(e) => updateSize(size, 'price', e.target.value)}
-                                required={entry.enabled}
-                                className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                              />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-warm-600 mb-1">Stock (units)</label>
-                              <input
-                                type="number"
-                                min="0"
-                                step="1"
-                                placeholder="e.g. 50"
-                                value={entry.quantity}
-                                onChange={(e) => updateSize(size, 'quantity', e.target.value)}
-                                required={entry.enabled}
-                                className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                              />
-                            </div>
+                            {entry.enabled && (
+                              <div className="grid grid-cols-3 gap-3 px-4 pb-4">
+                                <div>
+                                  <label className="block text-xs font-medium text-warm-600 mb-1">
+                                    MRP (₹)
+                                    <span className="ml-1 text-warm-400 font-normal">(optional)</span>
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    placeholder="e.g. 499"
+                                    value={entry.mrp}
+                                    onChange={(e) => updateSize(base.name, size, 'mrp', e.target.value)}
+                                    className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-warm-600 mb-1">Selling Price (₹)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    placeholder="e.g. 349"
+                                    value={entry.price}
+                                    onChange={(e) => updateSize(base.name, size, 'price', e.target.value)}
+                                    required={entry.enabled}
+                                    className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs font-medium text-warm-600 mb-1">Stock (units)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    placeholder="e.g. 50"
+                                    value={entry.quantity}
+                                    onChange={(e) => updateSize(base.name, size, 'quantity', e.target.value)}
+                                    required={entry.enabled}
+                                    className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )
+              })}
+
+              {selectedBases.length === 0 && bases.length > 0 && (
+                <p className="text-sm text-warm-400 italic mt-2">Select a base above to configure sizes.</p>
               )}
+
+              {totalEnabledSizeCount > 0 && (
+                <p className="text-xs text-amber-700 mt-4 font-medium">
+                  {totalEnabledSizeCount} size variant{totalEnabledSizeCount > 1 ? 's' : ''} will be created
+                </p>
+              )}
+            </div>
+
+            {/* Packaging */}
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <h2 className="font-semibold text-warm-900 mb-1">Packaging</h2>
+              <p className="text-sm text-warm-500 mb-4">Select packaging options available for this product and how customers choose them.</p>
+              <MultiSelectChips
+                label="Available Packaging"
+                all={packagingList}
+                selected={selectedPackaging}
+                onChange={setSelectedPackaging}
+                placeholder="No packaging added yet. Go to Catalog to add them."
+                mode={packagingMode}
+                onModeChange={setPackagingMode}
+              />
             </div>
           </div>
 

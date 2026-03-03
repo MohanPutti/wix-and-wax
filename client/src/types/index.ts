@@ -42,6 +42,11 @@ export interface Color {
   hex?: string
 }
 
+export interface Packaging {
+  id: string
+  name: string
+}
+
 // Product types
 export interface ProductVariant {
   id: string

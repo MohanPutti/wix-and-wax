@@ -322,6 +322,35 @@ app.delete('/api/colors/:id', requireAuth, async (req, res) => {
   }
 })
 
+// --- Packaging ---
+app.get('/api/packaging', async (_req, res) => {
+  try {
+    const packaging = await prisma.packaging.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: packaging })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch packaging' })
+  }
+})
+
+app.post('/api/packaging', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body as { name: string }
+    const pkg = await prisma.packaging.create({ data: { id: uuidv4(), name } })
+    res.json({ success: true, data: pkg })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to create packaging' })
+  }
+})
+
+app.delete('/api/packaging/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.packaging.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete packaging' })
+  }
+})
+
 // Sync product images directly via Prisma (bypasses core URL validation)
 app.put('/api/products/:id/images/sync', requireAuth, async (req, res) => {
   try {

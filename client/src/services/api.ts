@@ -12,6 +12,7 @@ import type {
   ProductBase,
   Fragrance,
   Color,
+  Packaging,
   Discount,
 } from '../types'
 
@@ -231,6 +232,21 @@ class ApiClient {
 
   async deleteColor(id: string) {
     return this.request<ApiResponse<{ id: string }>>(`/colors/${id}`, { method: 'DELETE' })
+  }
+
+  async getPackaging() {
+    return this.request<ApiResponse<Packaging[]>>('/packaging')
+  }
+
+  async createPackaging(name: string) {
+    return this.request<ApiResponse<Packaging>>('/packaging', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  async deletePackaging(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/packaging/${id}`, { method: 'DELETE' })
   }
 
   // Category endpoints

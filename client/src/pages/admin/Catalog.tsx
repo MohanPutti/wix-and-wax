@@ -3,15 +3,15 @@ import { PlusIcon, TrashIcon, PencilIcon, XMarkIcon, CheckIcon } from '@heroicon
 import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
 import Spinner from '../../components/ui/Spinner'
-import type { ProductBase, Fragrance, Color, Product } from '../../types'
+import type { ProductBase, Fragrance, Color, Packaging, Product } from '../../types'
 
-type Tab = 'bases' | 'fragrances' | 'colors'
+type Tab = 'bases' | 'fragrances' | 'colors' | 'packaging'
 
 // ─── Tag Products Modal ────────────────────────────────────────────────────────
 
 interface TagProductsModalProps {
   itemName: string
-  field: 'fragrances' | 'colors'
+  field: 'fragrances' | 'colors' | 'packaging'
   onClose: () => void
 }
 
@@ -438,10 +438,12 @@ export default function AdminCatalog() {
 
   const [fragrances, setFragrances] = useState<Fragrance[]>([])
   const [colors, setColors] = useState<Color[]>([])
+  const [packagingList, setPackagingList] = useState<Packaging[]>([])
   const [isLoadingFragrances, setIsLoadingFragrances] = useState(true)
   const [isLoadingColors, setIsLoadingColors] = useState(true)
+  const [isLoadingPackaging, setIsLoadingPackaging] = useState(true)
 
-  const [tagModal, setTagModal] = useState<{ name: string; field: 'fragrances' | 'colors' } | null>(null)
+  const [tagModal, setTagModal] = useState<{ name: string; field: 'fragrances' | 'colors' | 'packaging' } | null>(null)
 
   const loadFragrances = async () => {
     setIsLoadingFragrances(true)
@@ -457,9 +459,17 @@ export default function AdminCatalog() {
     setIsLoadingColors(false)
   }
 
+  const loadPackaging = async () => {
+    setIsLoadingPackaging(true)
+    const res = await api.getPackaging()
+    if (res.success) setPackagingList(res.data)
+    setIsLoadingPackaging(false)
+  }
+
   useEffect(() => {
     loadFragrances()
     loadColors()
+    loadPackaging()
   }, [])
 
   const addFragrance = async (name: string) => {
@@ -486,10 +496,23 @@ export default function AdminCatalog() {
     await loadColors()
   }
 
+  const addPackaging = async (name: string) => {
+    await api.createPackaging(name)
+    await loadPackaging()
+    setTagModal({ name, field: 'packaging' })
+  }
+
+  const deletePackaging = async (id: string, name: string) => {
+    if (!confirm(`Delete packaging "${name}"?`)) return
+    await api.deletePackaging(id)
+    await loadPackaging()
+  }
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'bases', label: 'Bases' },
     { id: 'fragrances', label: 'Fragrances' },
     { id: 'colors', label: 'Colors' },
+    { id: 'packaging', label: 'Packaging' },
   ]
 
   return (
@@ -503,7 +526,7 @@ export default function AdminCatalog() {
       )}
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-semibold text-warm-900">Catalog</h1>
-        <p className="text-warm-500 mt-1">Manage bases, fragrances, and colors used in your products.</p>
+        <p className="text-warm-500 mt-1">Manage bases, fragrances, colors, and packaging used in your products.</p>
       </div>
 
       {/* Tabs */}
@@ -543,6 +566,16 @@ export default function AdminCatalog() {
           onDelete={deleteColor}
           namePlaceholder="e.g. White, Ivory, Blush…"
           withHex
+        />
+      )}
+
+      {tab === 'packaging' && (
+        <SimpleListPanel
+          items={packagingList}
+          isLoading={isLoadingPackaging}
+          onAdd={addPackaging}
+          onDelete={deletePackaging}
+          namePlaceholder="e.g. Gift Box, Kraft Bag, Ribbon…"
         />
       )}
     </div>

@@ -13,19 +13,24 @@ export default function ProductDetail() {
   const { product, isLoading, error } = useProduct(slug || '', true)
   const dispatch = useAppDispatch()
   const [selectedVariant, setSelectedVariant] = useState<ProductVariant | null>(null)
+  const [selectedBaseName, setSelectedBaseName] = useState<string | null>(null)
   const [quantity, setQuantity] = useState(1)
   const [selectedImageIndex, setSelectedImageIndex] = useState(0)
   const [isAddingToCart, setIsAddingToCart] = useState(false)
   const [selectedColor, setSelectedColor] = useState<string | null>(null)
   const [selectedColorList, setSelectedColorList] = useState<string[]>([])
   const [selectedFragranceList, setSelectedFragranceList] = useState<string[]>([])
+  const [selectedPackagingList, setSelectedPackagingList] = useState<string[]>([])
   const [selectionError, setSelectionError] = useState('')
 
-  // Set default variant when product loads
+  // Set default variant + base when product loads
   if (product && !selectedVariant) {
     const defaultVariant = product.variants.find((v) => v.isDefault) || product.variants[0]
     if (defaultVariant) {
       setSelectedVariant(defaultVariant)
+      if (defaultVariant.options?.base && !selectedBaseName) {
+        setSelectedBaseName(defaultVariant.options.base)
+      }
     }
   }
 
@@ -57,11 +62,38 @@ export default function ProductDetail() {
   const hasDiscount = mrp !== null && mrp > price
   const discountPct = hasDiscount ? Math.round(((mrp! - price) / mrp!) * 100) : 0
 
-  const meta = product.metadata as ProductMetadata & { colorMode?: string; fragranceMode?: string } | undefined
+  const meta = product.metadata as ProductMetadata & {
+    baseMode?: string
+    colorMode?: string
+    fragranceMode?: string
+    packaging?: string[]
+    packagingMode?: string
+  } | undefined
   const fragrances = meta?.fragrances?.filter(Boolean) || []
   const colors = meta?.colors?.filter(Boolean) || []
+  const packaging = meta?.packaging?.filter(Boolean) || []
+  const baseMode = meta?.baseMode || 'single'
   const colorMode = meta?.colorMode || 'none'
   const fragranceMode = meta?.fragranceMode || 'none'
+  const packagingMode = meta?.packagingMode || 'none'
+
+  // Multi-base support: get unique base names from variants
+  const uniqueBases = [...new Set(
+    product.variants.map((v) => v.options?.base).filter(Boolean) as string[]
+  )]
+  const hasMultipleBases = uniqueBases.length > 1
+
+  const handleBaseSelect = (baseName: string) => {
+    setSelectedBaseName(baseName)
+    const defaultVariant = product.variants.find((v) => v.options?.base === baseName && v.isDefault)
+      || product.variants.find((v) => v.options?.base === baseName)
+    if (defaultVariant) setSelectedVariant(defaultVariant)
+  }
+
+  // Variants to show in the size picker (filtered by selected base)
+  const baseVariants = hasMultipleBases && selectedBaseName
+    ? product.variants.filter((v) => v.options?.base === selectedBaseName)
+    : product.variants
 
   const toggleFragrance = (f: string) => {
     setSelectedFragranceList((prev) =>
@@ -69,16 +101,30 @@ export default function ProductDetail() {
     )
   }
 
+  const togglePackaging = (p: string) => {
+    setSelectedPackagingList((prev) =>
+      prev.includes(p) ? prev.filter((x) => x !== p) : [...prev, p]
+    )
+  }
+
   const handleAddToCart = async () => {
     if (!currentVariant) return
 
     // Validate required selections
+    if (hasMultipleBases && baseMode !== 'none' && !selectedBaseName) {
+      setSelectionError('Please select a base before adding to cart.')
+      return
+    }
     if (colorMode === 'single' && colors.length > 0 && !selectedColor) {
       setSelectionError('Please select a color before adding to cart.')
       return
     }
     if (fragranceMode === 'single' && fragrances.length > 0 && selectedFragranceList.length === 0) {
       setSelectionError('Please select a fragrance before adding to cart.')
+      return
+    }
+    if (packagingMode === 'single' && packaging.length > 0 && selectedPackagingList.length === 0) {
+      setSelectionError('Please select a packaging option before adding to cart.')
       return
     }
     setSelectionError('')
@@ -88,6 +134,7 @@ export default function ProductDetail() {
     const colorSelection = colorMode === 'multi' ? selectedColorList : selectedColor ? [selectedColor] : []
     if (colorSelection.length > 0) noteParts.push(`Color: ${colorSelection.join(', ')}`)
     if (selectedFragranceList.length > 0) noteParts.push(`Fragrance: ${selectedFragranceList.join(', ')}`)
+    if (selectedPackagingList.length > 0) noteParts.push(`Packaging: ${selectedPackagingList.join(', ')}`)
     const note = noteParts.join(' | ') || undefined
 
     setIsAddingToCart(true)
@@ -283,18 +330,83 @@ export default function ProductDetail() {
             </div>
           )}
 
+          {/* Packaging */}
+          {packaging.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-warm-700 mb-2">
+                Packaging{packagingMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {packaging.map((p) => {
+                  if (packagingMode === 'none') {
+                    return (
+                      <span key={p} className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200">
+                        {p}
+                      </span>
+                    )
+                  }
+                  const isSelected = selectedPackagingList.includes(p)
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => {
+                        if (packagingMode === 'single') {
+                          setSelectedPackagingList(isSelected ? [] : [p])
+                        } else {
+                          togglePackaging(p)
+                        }
+                        setSelectionError('')
+                      }}
+                      className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
+                          : 'border-warm-200 text-warm-700 hover:border-amber-300'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
           {selectionError && (
             <p className="text-sm text-red-500 mb-4">{selectionError}</p>
           )}
 
-          {/* Variant Selection */}
-          {product.variants.length > 0 && (
+          {/* Base picker (only shown if multiple bases and mode is not 'none') */}
+          {hasMultipleBases && baseMode !== 'none' && (
+            <div className="mb-5">
+              <p className="text-sm font-medium text-warm-700 mb-2">
+                Base{baseMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {uniqueBases.map((base) => (
+                  <button
+                    key={base}
+                    onClick={() => handleBaseSelect(base)}
+                    className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                      selectedBaseName === base
+                        ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
+                        : 'border-warm-200 hover:border-warm-300 text-warm-700'
+                    }`}
+                  >
+                    {base}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Variant (Size) Selection */}
+          {baseVariants.length > 0 && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-warm-700 mb-2">
-                {product.variants[0]?.options?.base ? `${product.variants[0].options.base} — Size` : 'Size'}
+                Size
               </label>
               <div className="flex flex-wrap gap-2">
-                {product.variants.map((variant) => (
+                {baseVariants.map((variant) => (
                   <button
                     key={variant.id}
                     onClick={() => setSelectedVariant(variant)}

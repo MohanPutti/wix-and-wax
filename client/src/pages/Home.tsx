@@ -153,7 +153,7 @@ export default function Home() {
         <div className="marquee-track">
           {[...Array(2)].map((_, i) => (
             <span key={i} className="shrink-0 px-16 text-white text-sm font-semibold tracking-wide whitespace-nowrap">
-              ✦ For bulk orders &amp; custom candles, WhatsApp us at{' '}
+              ✦ For bulk orders &amp; customised gifts, WhatsApp us at{' '}
               <a href="https://wa.me/916361019528" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-amber-100">+91 63610 19528</a>
               {' '}— we'd love to craft something special for you &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
             </span>

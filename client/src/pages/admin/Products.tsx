@@ -169,16 +169,8 @@ export function AdminProductList() {
 
 // ─── Category Selector ────────────────────────────────────────────────────────
 
-const CATEGORY_GROUPS = [
-  { label: 'Shop', slugs: ['jar-candles', 'scented-sachets', 'tealights', 'gift-boxes', 'custom-name-candles'] },
-  { label: 'Occasions', slugs: ['birthdays', 'baby-showers', 'anniversaries', 'housewarming', 'festivals', 'return-favors'] },
-  { label: 'Wedding & Events', slugs: ['wedding-favors', 'mehendi-haldi', 'bridal-shower', 'save-the-date', 'luxury-hampers', 'bulk-events'] },
-  { label: 'Corporate', slugs: ['corporate', 'client-gifts', 'welcome-kits', 'festive-hampers', 'brand-candles'] },
-  { label: 'Featured', slugs: ['featured'] },
-]
-
 interface CategoryGroupSelectorProps {
-  categories: { id: string; name: string; slug: string }[]
+  categories: { id: string; name: string; slug: string; parentId?: string | null }[]
   selectedIds: string[]
   onChange: (ids: string[]) => void
 }
@@ -186,8 +178,8 @@ interface CategoryGroupSelectorProps {
 function CategoryGroupSelector({ categories, selectedIds, onChange }: CategoryGroupSelectorProps) {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({})
 
-  const toggleGroup = (label: string) =>
-    setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
+  const toggleGroup = (id: string) =>
+    setOpenGroups((prev) => ({ ...prev, [id]: !prev[id] }))
 
   const toggle = (id: string, checked: boolean) => {
     if (checked) {
@@ -197,40 +189,41 @@ function CategoryGroupSelector({ categories, selectedIds, onChange }: CategoryGr
     }
   }
 
+  // Build tree dynamically from flat category list
+  const groups = categories.filter((c) => !c.parentId)
+  const childrenOf = (parentId: string) => categories.filter((c) => c.parentId === parentId)
+
   return (
     <div className="space-y-1 mt-2">
-      {CATEGORY_GROUPS.map((group) => {
-        const groupCats = categories.filter((c) => group.slugs.includes(c.slug))
-        if (groupCats.length === 0) return null
-
-        // Single-item group (e.g. Featured) — direct checkbox, no accordion
-        if (groupCats.length === 1) {
-          const cat = groupCats[0]
+      {groups.map((group) => {
+        const groupCats = childrenOf(group.id)
+        if (groupCats.length === 0) {
+          // Leaf group (e.g. Featured) — direct checkbox
           return (
-            <label key={group.label} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-warm-50 cursor-pointer">
+            <label key={group.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-warm-50 cursor-pointer">
               <input
                 type="checkbox"
-                checked={selectedIds.includes(cat.id)}
-                onChange={(e) => toggle(cat.id, e.target.checked)}
+                checked={selectedIds.includes(group.id)}
+                onChange={(e) => toggle(group.id, e.target.checked)}
                 className="rounded border-warm-300 text-amber-600 focus:ring-amber-500"
               />
-              <span className="text-xs font-bold tracking-wider uppercase text-warm-500">{group.label}</span>
+              <span className="text-xs font-bold tracking-wider uppercase text-warm-500">{group.name}</span>
             </label>
           )
         }
 
-        const isOpen = !!openGroups[group.label]
+        const isOpen = !!openGroups[group.id]
         const selectedCount = groupCats.filter((c) => selectedIds.includes(c.id)).length
 
         return (
-          <div key={group.label}>
+          <div key={group.id}>
             <button
               type="button"
-              onClick={() => toggleGroup(group.label)}
+              onClick={() => toggleGroup(group.id)}
               className="flex items-center justify-between w-full px-2 py-1.5 rounded-lg text-xs font-bold tracking-wider uppercase text-warm-500 hover:text-warm-800 hover:bg-warm-50 transition-colors"
             >
               <span className="flex items-center gap-2">
-                {group.label}
+                {group.name}
                 {selectedCount > 0 && (
                   <span className="bg-amber-100 text-amber-700 rounded-full px-1.5 py-0.5 text-[10px] font-semibold normal-case tracking-normal">
                     {selectedCount}

@@ -20,7 +20,22 @@ const statusColors: Record<string, 'default' | 'success' | 'warning'> = {
 export function AdminProductList() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
-  const { products, isLoading, pagination, refresh } = useProducts({ page, limit: 10 })
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [hasLoaded, setHasLoaded] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search)
+      setPage(1)
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  const { products, isLoading, pagination, refresh } = useProducts({ page, limit: 10, search: debouncedSearch || undefined })
+
+  useEffect(() => {
+    if (!isLoading) setHasLoaded(true)
+  }, [isLoading])
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return
@@ -32,7 +47,7 @@ export function AdminProductList() {
     }
   }
 
-  if (isLoading) {
+  if (isLoading && !hasLoaded) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <Spinner size="lg" />

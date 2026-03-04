@@ -5,7 +5,7 @@ import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
 import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
-import type { Category, Product } from '../../types'
+import type { Category, CategoryStatus, Product } from '../../types'
 
 // ─── Tag Products Modal ────────────────────────────────────────────────────────
 
@@ -179,10 +179,10 @@ function TagProductsModal({ categoryId, categoryName, onClose }: TagProductsModa
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AdminCategories() {
-  const { categories, isLoading, refresh } = useCategories()
+  const { categories, isLoading, refresh } = useCategories(true)
   const [isAdding, setIsAdding] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [formData, setFormData] = useState({ name: '', slug: '', description: '', group: '' })
+  const [formData, setFormData] = useState({ name: '', slug: '', description: '', group: '', status: 'active' as CategoryStatus })
   const [imageUrl, setImageUrl] = useState<string>('')
   const [isUploadingImage, setIsUploadingImage] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -221,19 +221,20 @@ export default function AdminCategories() {
       description: formData.description || undefined,
       image: imageUrl || undefined,
       parentId: parentCat?.id || undefined,
+      status: formData.status,
     }
 
     try {
       if (editingId) {
         await api.updateCategory(editingId, payload)
-        setFormData({ name: '', slug: '', description: '', group: '' })
+        setFormData({ name: '', slug: '', description: '', group: '', status: 'active' })
         setImageUrl('')
         setIsAdding(false)
         setEditingId(null)
         refresh()
       } else {
         const res = await api.createCategory(payload)
-        setFormData({ name: '', slug: '', description: '', group: '' })
+        setFormData({ name: '', slug: '', description: '', group: '', status: 'active' })
         setImageUrl('')
         setIsAdding(false)
         refresh()
@@ -257,6 +258,7 @@ export default function AdminCategories() {
       slug: category.slug,
       description: category.description || '',
       group: parent?.name || '',
+      status: category.status || 'active',
     })
     setImageUrl(category.image || '')
     setIsAdding(true)
@@ -275,7 +277,7 @@ export default function AdminCategories() {
   const handleCancel = () => {
     setIsAdding(false)
     setEditingId(null)
-    setFormData({ name: '', slug: '', description: '', group: '' })
+    setFormData({ name: '', slug: '', description: '', group: '', status: 'active' })
     setImageUrl('')
   }
 
@@ -398,6 +400,19 @@ export default function AdminCategories() {
               </div>
             )}
 
+            <div>
+              <label className="block text-sm font-medium text-warm-700 mb-1">Status</label>
+              <select
+                value={formData.status}
+                onChange={(e) => setFormData({ ...formData, status: e.target.value as CategoryStatus })}
+                className="w-full px-4 py-2.5 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-warm-900 bg-white"
+              >
+                <option value="active">Active — visible to customers</option>
+                <option value="draft">Draft — hidden, being prepared</option>
+                <option value="archived">Archived — hidden, products also archived</option>
+              </select>
+            </div>
+
             <div className="flex gap-4">
               <Button type="submit" isLoading={isSubmitting}>
                 {editingId ? 'Update' : 'Create'} Category
@@ -418,8 +433,8 @@ export default function AdminCategories() {
               <tr>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Name</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Group</th>
+                <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Status</th>
                 <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Slug</th>
-                <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Description</th>
                 <th className="text-right px-6 py-4 text-sm font-semibold text-warm-700">Actions</th>
               </tr>
             </thead>
@@ -444,10 +459,29 @@ export default function AdminCategories() {
                       <span className="text-warm-400 text-sm">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-warm-600">{category.slug}</td>
-                  <td className="px-6 py-4 text-warm-600 max-w-xs truncate">
-                    {category.description || '-'}
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={async () => {
+                        const next: CategoryStatus = category.status === 'active' ? 'archived' : 'active'
+                        await api.updateCategory(category.id, { status: next } as Partial<Category>)
+                        refresh()
+                      }}
+                      className={`inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full transition-colors ${
+                        category.status === 'active'
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : category.status === 'draft'
+                          ? 'bg-warm-100 text-warm-600 hover:bg-warm-200'
+                          : 'bg-red-100 text-red-600 hover:bg-red-200'
+                      }`}
+                      title={category.status === 'active' ? 'Click to archive' : 'Click to activate'}
+                    >
+                      <span className={`w-1.5 h-1.5 rounded-full ${
+                        category.status === 'active' ? 'bg-green-500' : category.status === 'draft' ? 'bg-warm-400' : 'bg-red-400'
+                      }`} />
+                      {category.status}
+                    </button>
                   </td>
+                  <td className="px-6 py-4 text-warm-600">{category.slug}</td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
                       <button

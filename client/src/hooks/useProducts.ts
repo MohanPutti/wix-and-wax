@@ -106,7 +106,7 @@ function flattenCategories(nodes: (Category & { children?: Category[] })[]): Cat
   return result
 }
 
-export function useCategories() {
+export function useCategories(adminMode = false) {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -115,7 +115,7 @@ export function useCategories() {
     setIsLoading(true)
     setError(null)
     try {
-      const response = await api.getCategories()
+      const response = await api.getCategories(adminMode ? undefined : 'active')
       if (response.success) {
         setCategories(flattenCategories(response.data as (Category & { children?: Category[] })[]))
       }

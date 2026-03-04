@@ -73,6 +73,8 @@ export interface ProductImage {
   sortOrder: number
 }
 
+export type CategoryStatus = 'active' | 'draft' | 'archived'
+
 export interface Category {
   id: string
   name: string
@@ -81,6 +83,7 @@ export interface Category {
   image?: string
   parentId?: string
   sortOrder: number
+  status: CategoryStatus
 }
 
 export interface Product {

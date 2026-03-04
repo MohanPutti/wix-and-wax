@@ -250,8 +250,9 @@ class ApiClient {
   }
 
   // Category endpoints
-  async getCategories() {
-    return this.request<ApiResponse<Category[]>>('/categories')
+  async getCategories(status?: string) {
+    const q = status ? `?status=${status}` : ''
+    return this.request<ApiResponse<Category[]>>(`/categories${q}`)
   }
 
   async createCategory(data: Partial<Category>) {

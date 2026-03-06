@@ -42,4 +42,11 @@ export const config = {
   shiprocketEmail: process.env.SHIPROCKET_EMAIL || '',
   shiprocketPassword: process.env.SHIPROCKET_PASSWORD || '',
   storePincode: process.env.STORE_PINCODE || '',
+
+  // Email (Gmail SMTP)
+  smtpUser: process.env.SMTP_USER || '',
+  smtpPass: process.env.SMTP_PASS || '',
+  smtpFrom: process.env.SMTP_FROM || '',
+  smtpFromName: process.env.SMTP_FROM_NAME || 'Wicks and Wax',
+  adminEmail: process.env.ADMIN_EMAIL || '',
 }

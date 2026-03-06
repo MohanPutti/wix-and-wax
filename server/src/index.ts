@@ -14,10 +14,14 @@ import {
   setupCartModule,
   setupOrderModule,
   setupDiscountModule,
+  setupNotificationModule,
   createUserService,
+  createCartService,
+  createNotificationService,
 } from '../../core/src/index.js'
 import { createRazorpayAdapter } from '../../core/src/modules/payments/adapters/razorpay.js'
 import { createPhonePeAdapter } from '../../core/src/modules/payments/adapters/phonepe.js'
+import { createSMTPAdapter, gmailConfig } from '../../core/src/modules/notifications/adapters/smtp.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -77,6 +81,15 @@ const verifyToken = async (token: string) => {
   }
 }
 
+// Notification service — persists to DB, tracks sent/failed, supports retry via admin API
+const smtpAdapter = config.smtpUser && config.smtpPass
+  ? createSMTPAdapter(gmailConfig(config.smtpUser, config.smtpPass, config.smtpFrom || config.smtpUser))
+  : null
+
+const notificationService = createNotificationService(prisma, {
+  adapters: smtpAdapter ? { email: smtpAdapter } : {},
+})
+
 // Setup core modules
 app.use('/api', setupUserModule({
   prisma,
@@ -110,6 +123,12 @@ app.use('/api', setupOrderModule({
 app.use('/api', setupDiscountModule({
   prisma,
   verifyToken,
+}))
+
+app.use('/api', setupNotificationModule({
+  prisma,
+  verifyToken,
+  adapters: smtpAdapter ? { email: smtpAdapter } : undefined,
 }))
 
 // File upload endpoint
@@ -219,6 +238,34 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
   (req as express.Request & { user: typeof user }).user = user
   next()
 }
+
+// Cart service instance for custom routes
+const cartService = createCartService(prisma, { expirationDays: 30, defaultCurrency: 'INR' })
+
+// Merge guest cart into authenticated user's cart on login/register
+app.post('/api/cart/merge', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as express.Request & { user?: { id: string } }).user!.id
+    const sessionId = req.headers['x-session-id'] as string | undefined
+
+    if (!sessionId) {
+      const userCart = await cartService.getOrCreate(userId)
+      return res.json({ success: true, data: userCart })
+    }
+
+    const guestCart = await cartService.findBySessionId(sessionId)
+    if (!guestCart || guestCart.items.length === 0) {
+      const userCart = await cartService.getOrCreate(userId)
+      return res.json({ success: true, data: userCart })
+    }
+
+    const mergedCart = await cartService.mergeGuestCart(guestCart.id, userId)
+    res.json({ success: true, data: mergedCart })
+  } catch (error) {
+    console.error('Error merging cart:', error)
+    res.status(500).json({ success: false, error: 'Failed to merge cart' })
+  }
+})
 
 // ============================================================
 // CATALOG MANAGEMENT - Bases, Fragrances, Colors
@@ -705,6 +752,23 @@ app.post('/api/payments/verify', optionalAuth, async (req, res) => {
     })
 
     res.json({ success: true, data: { order: updatedOrder } })
+
+    // Send order confirmation emails via NotificationService (persisted, retryable)
+    const addr = (order.shippingAddress as Record<string, string>) || {}
+    const trackingUrl = `${config.frontendUrl}/order-confirmation/${order.orderNumber}?email=${encodeURIComponent(order.email)}`
+    const adminOrderUrl = `${config.frontendUrl}/admin/orders/${order.id}`
+    const itemsHtml = order.items.map((item: { productName: string; variantName?: string | null; quantity: number; total: unknown }) =>
+      `<tr><td style="padding:8px 0;border-bottom:1px solid #f3ede8;">${item.productName}${item.variantName ? ` – ${item.variantName}` : ''}</td><td style="padding:8px 0;border-bottom:1px solid #f3ede8;text-align:center;">${item.quantity}</td><td style="padding:8px 0;border-bottom:1px solid #f3ede8;text-align:right;">₹${Number(item.total).toFixed(2)}</td></tr>`
+    ).join('')
+
+    const customerHtml = `<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;background:#fffdf9;padding:32px;color:#3d2c1e;"><h1 style="font-size:24px;margin-bottom:4px;">Order Confirmed</h1><p style="color:#7c5c44;margin-bottom:24px;">Thank you for your order! We're getting it ready.</p><p style="margin-bottom:16px;"><strong>Order #${order.orderNumber}</strong></p><table style="width:100%;border-collapse:collapse;margin-bottom:16px;"><thead><tr style="border-bottom:2px solid #e8d9cc;"><th style="text-align:left;padding-bottom:8px;">Item</th><th style="text-align:center;padding-bottom:8px;">Qty</th><th style="text-align:right;padding-bottom:8px;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><table style="width:100%;margin-bottom:24px;">${Number(order.discount) > 0 ? `<tr><td style="color:#7c5c44;">Discount</td><td style="text-align:right;color:#16a34a;">-₹${Number(order.discount).toFixed(2)}</td></tr>` : ''}<tr><td style="color:#7c5c44;">Shipping</td><td style="text-align:right;">₹${Number(order.shipping).toFixed(2)}</td></tr><tr style="font-size:18px;font-weight:bold;"><td>Total</td><td style="text-align:right;">₹${Number(order.total).toFixed(2)}</td></tr></table><p style="margin-bottom:4px;"><strong>Shipping to:</strong></p><p style="color:#7c5c44;margin-bottom:24px;">${addr.firstName} ${addr.lastName}, ${addr.address1}, ${addr.city}, ${addr.state} ${addr.postalCode}</p><a href="${trackingUrl}" style="display:inline-block;background:#d97706;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">Track Your Order</a></div>`
+
+    const adminHtml = `<div style="font-family:Georgia,serif;max-width:600px;margin:0 auto;padding:32px;color:#3d2c1e;"><h1 style="font-size:20px;">New Order – #${order.orderNumber}</h1><p><strong>Customer:</strong> ${order.email}</p><p><strong>Total:</strong> ₹${Number(order.total).toFixed(2)}</p><p><strong>Ship to:</strong> ${addr.firstName} ${addr.lastName}, ${addr.address1}, ${addr.city}, ${addr.state} ${addr.postalCode}</p><table style="width:100%;border-collapse:collapse;margin:16px 0;"><thead><tr><th style="text-align:left;">Item</th><th style="text-align:center;">Qty</th><th style="text-align:right;">Total</th></tr></thead><tbody>${itemsHtml}</tbody></table><a href="${adminOrderUrl}" style="display:inline-block;background:#d97706;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">View Order in Admin</a></div>`
+
+    notificationService.send({ type: 'email', recipient: order.email, subject: `Order Confirmed – #${order.orderNumber}`, content: customerHtml }).catch(() => {})
+    if (config.adminEmail) {
+      notificationService.send({ type: 'email', recipient: config.adminEmail, subject: `New Order – #${order.orderNumber} from ${order.email}`, content: adminHtml }).catch(() => {})
+    }
   } catch (error) {
     console.error('Payment verification error:', error)
     res.status(500).json({ success: false, error: { code: 'VERIFICATION_ERROR', message: 'Payment verification failed' } })

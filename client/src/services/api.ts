@@ -277,14 +277,24 @@ class ApiClient {
 
   // Cart endpoints
   async getCart(sessionId?: string) {
-    const query = sessionId ? `?sessionId=${sessionId}` : ''
-    return this.request<ApiResponse<Cart>>(`/cart${query}`)
+    return this.request<ApiResponse<Cart>>('/cart', {
+      headers: sessionId ? { 'x-session-id': sessionId } : {},
+    })
   }
 
   async addToCart(data: { variantId: string; quantity: number; sessionId?: string; note?: string }) {
+    const { sessionId, note, ...rest } = data
     return this.request<ApiResponse<Cart>>('/cart/items', {
       method: 'POST',
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...rest, ...(note ? { metadata: { note } } : {}) }),
+      headers: sessionId ? { 'x-session-id': sessionId } : {},
+    })
+  }
+
+  async mergeGuestCart(sessionId: string) {
+    return this.request<ApiResponse<Cart>>('/cart/merge', {
+      method: 'POST',
+      headers: { 'x-session-id': sessionId },
     })
   }
 
@@ -367,7 +377,7 @@ class ApiClient {
     })
   }
 
-  async getOrders(params?: { page?: number; limit?: number; status?: string }) {
+  async getOrders(params?: { page?: number; limit?: number; status?: string; search?: string }) {
     const searchParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {

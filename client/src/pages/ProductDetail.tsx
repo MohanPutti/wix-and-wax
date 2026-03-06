@@ -5,7 +5,7 @@ import { useProduct } from '../hooks/useProducts'
 import { useAppDispatch } from '../store/hooks'
 import { addToCart } from '../store/slices/cartSlice'
 import Button from '../components/ui/Button'
-import Spinner from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
 import type { ProductVariant, ProductMetadata } from '../types'
 
 export default function ProductDetail() {
@@ -36,8 +36,36 @@ export default function ProductDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Spinner size="lg" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid lg:grid-cols-2 gap-12">
+          {/* Image column */}
+          <div className="space-y-4">
+            <Skeleton className="aspect-square rounded-2xl" />
+            <div className="flex gap-3">
+              {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="w-20 h-20 rounded-lg flex-shrink-0" />)}
+            </div>
+          </div>
+          {/* Info column */}
+          <div className="space-y-5">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-9 w-3/4" />
+            <Skeleton className="h-8 w-1/3" />
+            <div className="space-y-2 pt-2">
+              <Skeleton className="h-3 w-20" />
+              <div className="flex gap-2">
+                {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-9 w-20 rounded-full" />)}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <div className="flex gap-2">
+                {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-9 w-16 rounded-full" />)}
+              </div>
+            </div>
+            <Skeleton className="h-12 w-full rounded-xl" />
+            <Skeleton className="h-12 w-full rounded-xl" />
+          </div>
+        </div>
       </div>
     )
   }

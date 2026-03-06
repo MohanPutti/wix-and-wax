@@ -5,7 +5,8 @@ import { selectIsAuthenticated } from '../store/slices/authSlice'
 import Button from '../components/ui/Button'
 import Badge from '../components/ui/Badge'
 import Spinner from '../components/ui/Spinner'
-import { useState, useCallback } from 'react'
+import Skeleton from '../components/ui/Skeleton'
+import { useState, useCallback, useRef } from 'react'
 import { api } from '../services/api'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
@@ -42,8 +43,25 @@ export function OrderList() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Spinner size="lg" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Skeleton className="h-9 w-48 mb-8" />
+        <div className="space-y-4">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="bg-white rounded-xl p-6 shadow-soft">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="space-y-2">
+                  <Skeleton className="h-5 w-36" />
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="h-3 w-40" />
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Skeleton className="h-5 w-20" />
+                  <Skeleton className="h-3 w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
@@ -201,8 +219,33 @@ export function OrderDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Spinner size="lg" />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Skeleton className="h-4 w-32 mb-2" />
+        <Skeleton className="h-9 w-56 mb-8" />
+        <div className="grid lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 bg-white rounded-xl p-6 shadow-soft space-y-4">
+            <Skeleton className="h-5 w-32 mb-2" />
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="flex gap-4 py-4 border-b border-warm-100 last:border-0">
+                <Skeleton className="h-20 w-20 rounded-lg flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                  <Skeleton className="h-3 w-1/4" />
+                </div>
+                <Skeleton className="h-4 w-16 flex-shrink-0" />
+              </div>
+            ))}
+          </div>
+          <div className="space-y-4">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="bg-white rounded-xl p-6 shadow-soft space-y-3">
+                <Skeleton className="h-5 w-32" />
+                {Array.from({ length: 4 }).map((_, j) => <Skeleton key={j} className="h-3 w-full" />)}
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -379,6 +422,28 @@ export function OrderDetail() {
   )
 }
 
+function CopyLinkButton() {
+  const [copied, setCopied] = useState(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+      setCopied(true)
+      if (timerRef.current) clearTimeout(timerRef.current)
+      timerRef.current = setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="text-amber-600 hover:text-amber-700 text-sm font-medium underline underline-offset-2"
+    >
+      {copied ? 'Copied!' : 'Copy tracking link'}
+    </button>
+  )
+}
+
 export function OrderConfirmation() {
   const { orderNumber } = useParams<{ orderNumber: string }>()
   const [searchParams] = useSearchParams()
@@ -436,8 +501,11 @@ export function OrderConfirmation() {
         <h2 className="font-serif text-2xl font-semibold text-green-800 mb-2">
           Thank you for your order!
         </h2>
-        <p className="text-green-700">
-          We've received your order and will send you an email confirmation shortly.
+        <p className="text-green-700 mb-4">
+          We've received your order and will send you a confirmation email shortly.
+        </p>
+        <p className="text-green-600 text-sm">
+          Bookmark this page or <CopyLinkButton /> to track your order later.
         </p>
       </div>
 

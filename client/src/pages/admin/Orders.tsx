@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { EyeIcon } from '@heroicons/react/24/outline'
 import { useOrders, useOrder } from '../../hooks/useOrders'
 import Badge from '../../components/ui/Badge'
 import Select from '../../components/ui/Select'
+import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
 import type { Order } from '../../types'
 
@@ -25,7 +26,18 @@ const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'd
 
 export function AdminOrderList() {
   const [statusFilter, setStatusFilter] = useState('')
-  const { orders, isLoading } = useOrders({ status: statusFilter || undefined })
+  const [searchInput, setSearchInput] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchInput), 300)
+    return () => clearTimeout(timer)
+  }, [searchInput])
+
+  const { orders, isLoading } = useOrders({
+    status: statusFilter || undefined,
+    search: debouncedSearch || undefined,
+  })
 
   if (isLoading) {
     return (
@@ -41,7 +53,14 @@ export function AdminOrderList() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 shadow-soft mb-6">
-        <div className="flex gap-4">
+        <div className="flex gap-4 flex-col sm:flex-row">
+          <div className="flex-1">
+            <Input
+              placeholder="Search by order # or email..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
           <Select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}

@@ -119,6 +119,23 @@ export const removeCartItem = createAsyncThunk(
   }
 )
 
+export const mergeGuestCart = createAsyncThunk(
+  'cart/merge',
+  async (_, { getState, rejectWithValue }) => {
+    const state = getState() as RootState
+    const sessionId = state.cart.sessionId
+    try {
+      const response = await api.mergeGuestCart(sessionId)
+      if (response.success) {
+        return response.data
+      }
+      return rejectWithValue('Failed to merge cart')
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Failed to merge cart')
+    }
+  }
+)
+
 export const applyDiscount = createAsyncThunk(
   'cart/applyDiscount',
   async (code: string, { getState, rejectWithValue }) => {
@@ -246,6 +263,14 @@ const cartSlice = createSlice({
       .addCase(removeCartItem.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload as string
+      })
+
+    // Merge guest cart
+    builder
+      .addCase(mergeGuestCart.fulfilled, (state, action) => {
+        if (action.payload) {
+          state.cart = action.payload
+        }
       })
 
     // Apply discount

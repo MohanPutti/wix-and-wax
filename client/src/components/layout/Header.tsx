@@ -173,6 +173,9 @@ export default function Header() {
                   <Link to="/orders" className="block px-4 py-2 text-sm text-warm-700 hover:bg-warm-50">
                     My Orders
                   </Link>
+                  <Link to="/track-order" className="block px-4 py-2 text-sm text-warm-700 hover:bg-warm-50">
+                    Track Order
+                  </Link>
                   {isAdmin && (
                     <Link to="/admin" className="block px-4 py-2 text-sm text-warm-700 hover:bg-warm-50">
                       Admin Panel
@@ -187,9 +190,23 @@ export default function Header() {
                 </div>
               </div>
             ) : (
-              <Link to="/login" className={`p-2 ${THEME.headerText} hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50`}>
-                <UserIcon className="h-6 w-6" />
-              </Link>
+              <div className="relative group">
+                <button className={`p-2 ${THEME.headerText} hover:text-amber-600 transition-colors rounded-lg hover:bg-amber-50`}>
+                  <UserIcon className="h-6 w-6" />
+                </button>
+                <div className="absolute right-0 mt-2 w-44 bg-white rounded-xl shadow-soft border border-warm-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-1 z-50">
+                  <Link to="/login" className="block px-4 py-2 text-sm text-warm-700 hover:bg-warm-50">
+                    Sign In
+                  </Link>
+                  <Link to="/register" className="block px-4 py-2 text-sm text-warm-700 hover:bg-warm-50">
+                    Register
+                  </Link>
+                  <div className="border-t border-warm-100 my-1" />
+                  <Link to="/track-order" className="block px-4 py-2 text-sm text-warm-700 hover:bg-warm-50">
+                    Track Order
+                  </Link>
+                </div>
+              </div>
             )}
 
             {/* Mobile Menu Button */}
@@ -255,20 +272,29 @@ export default function Header() {
 
           {/* Auth Links */}
           {!isAuthenticated && (
-            <div className="p-4 flex gap-3">
+            <div className="p-4 space-y-2">
+              <div className="flex gap-3">
+                <Link
+                  to="/login"
+                  className="flex-1 text-center py-2.5 text-sm font-medium text-warm-700 border border-warm-300 rounded-lg hover:bg-warm-100 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="flex-1 text-center py-2.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                >
+                  Register
+                </Link>
+              </div>
               <Link
-                to="/login"
-                className="flex-1 text-center py-2.5 text-sm font-medium text-warm-700 border border-warm-300 rounded-lg hover:bg-warm-100 transition-colors"
+                to="/track-order"
+                className="block text-center py-2.5 text-sm font-medium text-amber-700 border border-amber-200 rounded-lg hover:bg-amber-50 transition-colors"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Login
-              </Link>
-              <Link
-                to="/register"
-                className="flex-1 text-center py-2.5 text-sm font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition-colors"
-                onClick={() => setIsMobileMenuOpen(false)}
-              >
-                Register
+                Track Your Order
               </Link>
             </div>
           )}

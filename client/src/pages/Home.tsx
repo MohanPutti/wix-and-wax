@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import { useProducts, useCategories } from '../hooks/useProducts'
 import ProductCard from '../components/products/ProductCard'
 import Carousel from '../components/ui/Carousel'
-import Spinner from '../components/ui/Spinner'
+import Skeleton from '../components/ui/Skeleton'
 import { THEME } from '../config'
 
 // Visual display config per slug — new categories get defaults
@@ -166,7 +166,17 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-6 sm:px-8 lg:px-10">
           <SectionHeader title="Featured Candles" subtitle="Our most loved scents" viewAllHref="/products" />
           {isLoading ? (
-            <div className="flex justify-center py-12"><Spinner size="lg" /></div>
+            <div className="flex gap-4 overflow-hidden">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex-shrink-0 w-52 sm:w-60 bg-white rounded-2xl shadow-soft overflow-hidden">
+                  <Skeleton className="aspect-square rounded-none" />
+                  <div className="p-4 space-y-2">
+                    <Skeleton className="h-3 w-1/3" />
+                    <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <Carousel itemWidth={260}>
               {products.map((product) => (

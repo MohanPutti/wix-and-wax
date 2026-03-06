@@ -1,8 +1,8 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { useEffect, useLayoutEffect, useRef } from 'react'
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from './store/hooks'
 import { fetchCurrentUser, selectToken } from './store/slices/authSlice'
-import { fetchCart } from './store/slices/cartSlice'
+import { fetchCart, mergeGuestCart } from './store/slices/cartSlice'
 import { api } from './services/api'
 import Layout from './components/layout/Layout'
 import AdminLayout from './components/layout/AdminLayout'
@@ -18,6 +18,7 @@ import Register from './pages/Register'
 import Profile from './pages/Profile'
 import AuthCallback from './pages/AuthCallback'
 import { OrderList, OrderDetail, OrderConfirmation } from './pages/Orders'
+import TrackOrder from './pages/TrackOrder'
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard'
@@ -27,16 +28,36 @@ import AdminCategories from './pages/admin/Categories'
 import AdminCatalog from './pages/admin/Catalog'
 import AdminDiscounts from './pages/admin/Discounts'
 
+// Disable browser scroll restoration before any rendering
+if ('scrollRestoration' in window.history) {
+  window.history.scrollRestoration = 'manual'
+}
+
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
 function AppContent() {
   const dispatch = useAppDispatch()
   const token = useAppSelector(selectToken)
+
+  const prevTokenRef = useRef<string | null>(undefined)
 
   useEffect(() => {
     // Always sync token to API client (handles both initial load and changes)
     api.setAccessToken(token)
     if (token) {
       dispatch(fetchCurrentUser())
+      // Merge guest cart only when transitioning from logged-out to logged-in
+      if (prevTokenRef.current === null) {
+        dispatch(mergeGuestCart())
+      }
     }
+    prevTokenRef.current = token
   }, [token, dispatch])
 
   useEffect(() => {
@@ -45,6 +66,8 @@ function AppContent() {
   }, [dispatch])
 
   return (
+    <>
+    <ScrollToTop />
     <Routes>
       {/* Customer Routes */}
       <Route
@@ -132,6 +155,14 @@ function AppContent() {
         }
       />
       <Route
+        path="/track-order"
+        element={
+          <Layout>
+            <TrackOrder />
+          </Layout>
+        }
+      />
+      <Route
         path="/order-confirmation/:orderNumber"
         element={
           <Layout>
@@ -214,6 +245,7 @@ function AppContent() {
         }
       />
     </Routes>
+    </>
   )
 }
 

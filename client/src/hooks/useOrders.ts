@@ -6,6 +6,7 @@ interface UseOrdersParams {
   page?: number
   limit?: number
   status?: string
+  search?: string
   enabled?: boolean
 }
 
@@ -114,6 +115,7 @@ export function useOrderByNumber(orderNumber: string, email?: string) {
 
     setIsLoading(true)
     setError(null)
+    setOrder(null)
 
     api
       .getOrderByNumber(orderNumber, email)

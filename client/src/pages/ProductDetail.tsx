@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useProduct } from '../hooks/useProducts'
 import { useAppDispatch } from '../store/hooks'
 import { addToCart } from '../store/slices/cartSlice'
@@ -24,20 +24,17 @@ export default function ProductDetail() {
   const [selectedFragranceList, setSelectedFragranceList] = useState<string[]>([])
   const [selectedPackagingList, setSelectedPackagingList] = useState<string[]>([])
   const [selectionError, setSelectionError] = useState('')
-  const [isZoomed, setIsZoomed] = useState(false)
+  const [isHoveringImage, setIsHoveringImage] = useState(false)
+  const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 })
   const [fragranceSearch, setFragranceSearch] = useState('')
   const [colorSearch, setColorSearch] = useState('')
 
-  useEffect(() => {
-    if (!isZoomed || !product) return
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsZoomed(false)
-      if (e.key === 'ArrowLeft') setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
-      if (e.key === 'ArrowRight') setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [isZoomed, product])
+  const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = ((e.clientX - rect.left) / rect.width) * 100
+    const y = ((e.clientY - rect.top) / rect.height) * 100
+    setZoomPos({ x, y })
+  }
 
   // Set default variant + base when product loads
   if (product && !selectedVariant) {
@@ -210,62 +207,6 @@ export default function ProductDetail() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Zoom lightbox */}
-      {isZoomed && (
-        <div
-          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
-          onClick={() => setIsZoomed(false)}
-        >
-          <button
-            onClick={() => setIsZoomed(false)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
-          >
-            <XMarkIcon className="h-8 w-8" />
-          </button>
-          {product.images.length > 1 && (
-            <>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
-                }}
-                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/35 rounded-full p-3 transition-colors"
-              >
-                <ChevronLeftIcon className="h-6 w-6 text-white" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation()
-                  setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
-                }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/35 rounded-full p-3 transition-colors"
-              >
-                <ChevronRightIcon className="h-6 w-6 text-white" />
-              </button>
-            </>
-          )}
-          <img
-            src={mainImage}
-            alt={product.name}
-            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          />
-          {product.images.length > 1 && (
-            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
-              {product.images.map((_, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i) }}
-                  className={`rounded-full transition-all ${
-                    i === selectedImageIndex ? 'w-5 h-2.5 bg-white' : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/60'
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Breadcrumb */}
       <Link
         to="/products"
@@ -280,13 +221,20 @@ export default function ProductDetail() {
         <div>
           {/* Main Image */}
           <div
-            className="aspect-square bg-warm-100 rounded-2xl overflow-hidden mb-4 relative group cursor-zoom-in"
-            onClick={() => setIsZoomed(true)}
+            className="aspect-square bg-warm-100 rounded-2xl overflow-hidden mb-4 relative group cursor-crosshair"
+            onMouseEnter={() => setIsHoveringImage(true)}
+            onMouseLeave={() => setIsHoveringImage(false)}
+            onMouseMove={handleImageMouseMove}
           >
             <img
               src={mainImage}
               alt={product.name}
               className="w-full h-full object-cover"
+              style={{
+                transform: isHoveringImage ? 'scale(2)' : 'scale(1)',
+                transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`,
+                transition: isHoveringImage ? 'transform 0.1s ease-out' : 'transform 0.3s ease-out',
+              }}
             />
             {hasDiscount && (
               <span className="absolute top-4 left-4 bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full">
@@ -294,7 +242,7 @@ export default function ProductDetail() {
               </span>
             )}
             {/* Arrow navigation */}
-            {product.images.length > 1 && (
+            {product.images.length > 1 && !isHoveringImage && (
               <>
                 <button
                   onClick={(e) => {
@@ -317,9 +265,11 @@ export default function ProductDetail() {
               </>
             )}
             {/* Zoom hint */}
-            <div className="absolute bottom-3 right-3 bg-black/30 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity select-none">
-              Click to zoom
-            </div>
+            {!isHoveringImage && (
+              <div className="absolute bottom-3 right-3 bg-black/30 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity select-none">
+                Hover to zoom
+              </div>
+            )}
           </div>
 
           {/* Dot indicators */}

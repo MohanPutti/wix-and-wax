@@ -36,7 +36,7 @@ export default function ProductDetail() {
     setZoomPos({ x, y })
   }
 
-  // Set default variant + base when product loads
+  // Set defaults when product loads
   if (product && !selectedVariant) {
     const defaultVariant = product.variants.find((v) => v.isDefault) || product.variants[0]
     if (defaultVariant) {
@@ -44,6 +44,19 @@ export default function ProductDetail() {
       if (defaultVariant.options?.base && !selectedBaseName) {
         setSelectedBaseName(defaultVariant.options.base)
       }
+    }
+    // Auto-select cheapest packaging when mandatory
+    const metaRaw = product.metadata as { packaging?: string[]; packagingPrices?: Record<string, number>; packagingMode?: string } | undefined
+    const initPackaging = metaRaw?.packaging?.filter(Boolean) || []
+    const initPackagingPrices = metaRaw?.packagingPrices || {}
+    const initPackagingMode = metaRaw?.packagingMode || 'none'
+    const isPackagingOnlyProduct = product.variants.length > 0 &&
+      product.variants.every((v) => v.options?.packaging && !v.options?.base)
+    if (!isPackagingOnlyProduct && initPackagingMode === 'single' && initPackaging.length > 0 && selectedPackagingList.length === 0) {
+      const cheapest = initPackaging.reduce((min, p) =>
+        (Number(initPackagingPrices[p]) || 0) < (Number(initPackagingPrices[min]) || 0) ? p : min
+      , initPackaging[0])
+      setSelectedPackagingList([cheapest])
     }
   }
 

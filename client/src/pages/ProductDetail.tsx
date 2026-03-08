@@ -242,14 +242,16 @@ export default function ProductDetail() {
               </span>
             )}
             {/* Arrow navigation */}
-            {product.images.length > 1 && !isHoveringImage && (
+            {product.images.length > 1 && (
               <>
                 <button
                   onClick={(e) => {
                     e.stopPropagation()
                     setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
                   }}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  onMouseEnter={() => setIsHoveringImage(false)}
+                  onMouseLeave={() => setIsHoveringImage(true)}
                 >
                   <ChevronLeftIcon className="h-4 w-4 text-warm-700" />
                 </button>
@@ -258,7 +260,9 @@ export default function ProductDetail() {
                     e.stopPropagation()
                     setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                  onMouseEnter={() => setIsHoveringImage(false)}
+                  onMouseLeave={() => setIsHoveringImage(true)}
                 >
                   <ChevronRightIcon className="h-4 w-4 text-warm-700" />
                 </button>

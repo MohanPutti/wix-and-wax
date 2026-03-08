@@ -522,7 +522,7 @@ export default function ProductDetail() {
                     )}
                   </div>
                   {fragrances.length > SEARCH_THRESHOLD ? (
-                    <div className="rounded-xl border border-warm-300 shadow-sm overflow-hidden">
+                    <div className="rounded-xl border border-warm-300 shadow-sm overflow-hidden focus-within:outline-none focus-within:ring-0">
                       {/* Search bar */}
                       <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50/60 border-b border-warm-200">
                         <MagnifyingGlassIcon className="h-3.5 w-3.5 text-warm-400 flex-shrink-0" />
@@ -531,7 +531,7 @@ export default function ProductDetail() {
                           value={fragranceSearch}
                           onChange={(e) => setFragranceSearch(e.target.value)}
                           placeholder="Search fragrances..."
-                          className="w-full text-sm bg-transparent outline-none text-warm-700 placeholder-warm-400"
+                          className="w-full text-sm bg-transparent outline-none focus:outline-none ring-0 text-warm-700 placeholder-warm-400"
                         />
                       </div>
                       {/* List */}
@@ -631,7 +631,7 @@ export default function ProductDetail() {
                     )}
                   </div>
                   {colors.length > SEARCH_THRESHOLD ? (
-                    <div className="rounded-xl border border-warm-300 shadow-sm overflow-hidden">
+                    <div className="rounded-xl border border-warm-300 shadow-sm overflow-hidden focus-within:outline-none focus-within:ring-0">
                       {/* Search bar */}
                       <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50/60 border-b border-warm-200">
                         <MagnifyingGlassIcon className="h-3.5 w-3.5 text-warm-400 flex-shrink-0" />
@@ -640,7 +640,7 @@ export default function ProductDetail() {
                           value={colorSearch}
                           onChange={(e) => setColorSearch(e.target.value)}
                           placeholder="Search colors..."
-                          className="w-full text-sm bg-transparent outline-none text-warm-700 placeholder-warm-400"
+                          className="w-full text-sm bg-transparent outline-none focus:outline-none ring-0 text-warm-700 placeholder-warm-400"
                         />
                       </div>
                       {/* List */}

@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ChevronLeftIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useProduct } from '../hooks/useProducts'
 import { useAppDispatch } from '../store/hooks'
 import { addToCart } from '../store/slices/cartSlice'
 import Button from '../components/ui/Button'
 import Skeleton from '../components/ui/Skeleton'
 import type { ProductVariant, ProductMetadata } from '../types'
+
+const SEARCH_THRESHOLD = 2
 
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
@@ -22,6 +24,20 @@ export default function ProductDetail() {
   const [selectedFragranceList, setSelectedFragranceList] = useState<string[]>([])
   const [selectedPackagingList, setSelectedPackagingList] = useState<string[]>([])
   const [selectionError, setSelectionError] = useState('')
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [fragranceSearch, setFragranceSearch] = useState('')
+  const [colorSearch, setColorSearch] = useState('')
+
+  useEffect(() => {
+    if (!isZoomed || !product) return
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsZoomed(false)
+      if (e.key === 'ArrowLeft') setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
+      if (e.key === 'ArrowRight') setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
+    }
+    window.addEventListener('keydown', handleKey)
+    return () => window.removeEventListener('keydown', handleKey)
+  }, [isZoomed, product])
 
   // Set default variant + base when product loads
   if (product && !selectedVariant) {
@@ -185,8 +201,71 @@ export default function ProductDetail() {
     }
   }
 
+  const filteredFragrances = fragrances.filter((f) =>
+    f.toLowerCase().includes(fragranceSearch.toLowerCase())
+  )
+  const filteredColors = colors.filter((c) =>
+    c.toLowerCase().includes(colorSearch.toLowerCase())
+  )
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Zoom lightbox */}
+      {isZoomed && (
+        <div
+          className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4"
+          onClick={() => setIsZoomed(false)}
+        >
+          <button
+            onClick={() => setIsZoomed(false)}
+            className="absolute top-4 right-4 text-white/70 hover:text-white transition-colors"
+          >
+            <XMarkIcon className="h-8 w-8" />
+          </button>
+          {product.images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/35 rounded-full p-3 transition-colors"
+              >
+                <ChevronLeftIcon className="h-6 w-6 text-white" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/35 rounded-full p-3 transition-colors"
+              >
+                <ChevronRightIcon className="h-6 w-6 text-white" />
+              </button>
+            </>
+          )}
+          <img
+            src={mainImage}
+            alt={product.name}
+            className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+          {product.images.length > 1 && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2">
+              {product.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(i) }}
+                  className={`rounded-full transition-all ${
+                    i === selectedImageIndex ? 'w-5 h-2.5 bg-white' : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/60'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <Link
         to="/products"
@@ -200,7 +279,10 @@ export default function ProductDetail() {
         {/* Images */}
         <div>
           {/* Main Image */}
-          <div className="aspect-square bg-warm-100 rounded-2xl overflow-hidden mb-4 relative">
+          <div
+            className="aspect-square bg-warm-100 rounded-2xl overflow-hidden mb-4 relative group cursor-zoom-in"
+            onClick={() => setIsZoomed(true)}
+          >
             <img
               src={mainImage}
               alt={product.name}
@@ -211,16 +293,60 @@ export default function ProductDetail() {
                 {discountPct}% OFF
               </span>
             )}
+            {/* Arrow navigation */}
+            {product.images.length > 1 && (
+              <>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedImageIndex((prev) => (prev - 1 + product.images.length) % product.images.length)
+                  }}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ChevronLeftIcon className="h-4 w-4 text-warm-700" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setSelectedImageIndex((prev) => (prev + 1) % product.images.length)
+                  }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <ChevronRightIcon className="h-4 w-4 text-warm-700" />
+                </button>
+              </>
+            )}
+            {/* Zoom hint */}
+            <div className="absolute bottom-3 right-3 bg-black/30 text-white text-xs px-2 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity select-none">
+              Click to zoom
+            </div>
           </div>
+
+          {/* Dot indicators */}
+          {product.images.length > 1 && (
+            <div className="flex justify-center gap-1.5 mb-3">
+              {product.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setSelectedImageIndex(i)}
+                  className={`rounded-full transition-all ${
+                    i === selectedImageIndex
+                      ? 'w-5 h-2 bg-amber-600'
+                      : 'w-2 h-2 bg-warm-300 hover:bg-warm-400'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
 
           {/* Thumbnail Gallery */}
           {product.images.length > 1 && (
-            <div className="flex gap-4">
+            <div className="flex gap-3 overflow-x-auto pb-1">
               {product.images.map((image, index) => (
                 <button
                   key={image.id}
                   onClick={() => setSelectedImageIndex(index)}
-                  className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                  className={`w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors flex-shrink-0 ${
                     selectedImageIndex === index
                       ? 'border-amber-600'
                       : 'border-transparent hover:border-warm-300'
@@ -288,89 +414,83 @@ export default function ProductDetail() {
             <p className="text-warm-600 mb-8 leading-relaxed">{product.description}</p>
           )}
 
-          {/* Fragrances */}
-          {fragrances.length > 0 && (
+          {/* Case 1: Base picker + Size picker */}
+          {!isPackagingOnly && (
+            <>
+              {/* Base picker */}
+              {hasMultipleBases && baseMode !== 'none' && (
+                <div className="mb-5">
+                  <p className="text-sm font-medium text-warm-700 mb-2">
+                    Base<span className="text-red-500 ml-0.5">*</span>
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {uniqueBases.map((base) => (
+                      <button
+                        key={base}
+                        onClick={() => handleBaseSelect(base)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                          selectedBaseName === base
+                            ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
+                            : 'border-warm-200 hover:border-warm-300 text-warm-700'
+                        }`}
+                      >
+                        {base}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Size picker */}
+              {baseVariants.length > 0 && (
+                <div className="mb-5">
+                  <label className="block text-sm font-medium text-warm-700 mb-2">Size</label>
+                  <div className="flex flex-wrap gap-2">
+                    {baseVariants.map((variant) => (
+                      <button
+                        key={variant.id}
+                        onClick={() => setSelectedVariant(variant)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                          currentVariant.id === variant.id
+                            ? 'border-amber-600 bg-amber-50 text-amber-700'
+                            : 'border-warm-200 hover:border-warm-300 text-warm-700'
+                        }`}
+                      >
+                        {variant.options?.size || variant.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Case 2: Packaging-only variant selector */}
+          {isPackagingOnly && product.variants.length > 0 && (
             <div className="mb-5">
-              <p className="text-sm font-medium text-warm-700 mb-2">
-                Fragrance{fragranceMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
-              </p>
+              <label className="block text-sm font-medium text-warm-700 mb-2">
+                Packaging<span className="text-red-500 ml-0.5">*</span>
+              </label>
               <div className="flex flex-wrap gap-2">
-                {fragrances.map((f) => {
-                  if (fragranceMode === 'none') {
-                    return (
-                      <span key={f} className="text-sm bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200">
-                        {f}
-                      </span>
-                    )
-                  }
-                  const isSelected = selectedFragranceList.includes(f)
-                  return (
-                    <button
-                      key={f}
-                      onClick={() => {
-                        if (fragranceMode === 'single') {
-                          setSelectedFragranceList(isSelected ? [] : [f])
-                        } else {
-                          toggleFragrance(f)
-                        }
-                        setSelectionError('')
-                      }}
-                      className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
-                        isSelected
-                          ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
-                          : 'border-warm-200 text-warm-700 hover:border-amber-300'
-                      }`}
-                    >
-                      {f}
-                    </button>
-                  )
-                })}
+                {product.variants.map((variant) => (
+                  <button
+                    key={variant.id}
+                    onClick={() => setSelectedVariant(variant)}
+                    className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
+                      currentVariant.id === variant.id
+                        ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
+                        : 'border-warm-200 hover:border-warm-300 text-warm-700'
+                    }`}
+                  >
+                    {variant.options?.packaging || variant.name}
+                    <span className="ml-1.5 text-warm-500">₹{Number(variant.price).toFixed(0)}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
 
-          {/* Colors */}
-          {colors.length > 0 && (
-            <div className="mb-6">
-              <p className="text-sm font-medium text-warm-700 mb-2">
-                Color{colorMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {colors.map((c) => {
-                  if (colorMode === 'none') {
-                    return (
-                      <span key={c} className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200">
-                        {c}
-                      </span>
-                    )
-                  }
-                  const isSelected = colorMode === 'multi' ? selectedColorList.includes(c) : selectedColor === c
-                  return (
-                    <button
-                      key={c}
-                      onClick={() => {
-                        if (colorMode === 'multi') {
-                          setSelectedColorList((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c])
-                        } else {
-                          setSelectedColor(isSelected ? null : c)
-                        }
-                        setSelectionError('')
-                      }}
-                      className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
-                        isSelected
-                          ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
-                          : 'border-warm-200 text-warm-700 hover:border-amber-300'
-                      }`}
-                    >
-                      {c}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Packaging add-on (Case 1 only — Case 2 handled by variant selector above) */}
+          {/* Packaging add-on (Case 1 only) */}
           {!isPackagingOnly && packaging.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-warm-700 mb-2">
@@ -417,84 +537,228 @@ export default function ProductDetail() {
             </div>
           )}
 
-          {selectionError && (
-            <p className="text-sm text-red-500 mb-4">{selectionError}</p>
-          )}
+          {/* Fragrances + Colors — side by side when both exist */}
+          {(fragrances.length > 0 || colors.length > 0) && (
+            <div className={`mb-6 ${fragrances.length > 0 && colors.length > 0 ? 'grid grid-cols-2 gap-4' : ''}`}>
 
-          {/* Case 2: Packaging-only variant selector */}
-          {isPackagingOnly && product.variants.length > 0 && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-warm-700 mb-2">
-                Packaging<span className="text-red-500 ml-0.5">*</span>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {product.variants.map((variant) => (
-                  <button
-                    key={variant.id}
-                    onClick={() => setSelectedVariant(variant)}
-                    className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
-                      currentVariant.id === variant.id
-                        ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
-                        : 'border-warm-200 hover:border-warm-300 text-warm-700'
-                    }`}
-                  >
-                    {variant.options?.packaging || variant.name}
-                    <span className="ml-1.5 text-warm-500">₹{Number(variant.price).toFixed(0)}</span>
-                  </button>
-                ))}
-              </div>
+              {/* Fragrances */}
+              {fragrances.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-warm-800">
+                      Fragrance{fragranceMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
+                    </p>
+                    {selectedFragranceList.length > 0 && (
+                      <span className="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded-full">
+                        {selectedFragranceList.length} selected
+                      </span>
+                    )}
+                  </div>
+                  {fragrances.length > SEARCH_THRESHOLD ? (
+                    <div className="rounded-xl border border-warm-300 shadow-sm overflow-hidden">
+                      {/* Search bar */}
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50/60 border-b border-warm-200">
+                        <MagnifyingGlassIcon className="h-3.5 w-3.5 text-warm-400 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={fragranceSearch}
+                          onChange={(e) => setFragranceSearch(e.target.value)}
+                          placeholder="Search fragrances..."
+                          className="w-full text-sm bg-transparent outline-none text-warm-700 placeholder-warm-400"
+                        />
+                      </div>
+                      {/* List */}
+                      <div className="max-h-44 overflow-y-auto bg-white">
+                        {filteredFragrances.length === 0 ? (
+                          <div className="py-6 text-xs text-warm-400 text-center">No results</div>
+                        ) : filteredFragrances.map((f, i) => {
+                          if (fragranceMode === 'none') {
+                            return (
+                              <div key={f} className={`px-3 py-2.5 text-sm text-warm-700 ${i % 2 === 0 ? 'bg-white' : 'bg-warm-50/40'}`}>
+                                {f}
+                              </div>
+                            )
+                          }
+                          const isSelected = selectedFragranceList.includes(f)
+                          return (
+                            <button
+                              key={f}
+                              onClick={() => {
+                                if (fragranceMode === 'single') {
+                                  setSelectedFragranceList(isSelected ? [] : [f])
+                                } else {
+                                  toggleFragrance(f)
+                                }
+                                setSelectionError('')
+                              }}
+                              className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between border-b border-warm-100 last:border-0 ${
+                                isSelected
+                                  ? 'bg-amber-100 text-amber-900 font-medium'
+                                  : 'text-warm-700 hover:bg-amber-50'
+                              }`}
+                            >
+                              <span className="truncate pr-2">{f}</span>
+                              {isSelected && (
+                                <span className="flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8"><path stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M1 4l3 3 5-6"/></svg>
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {fragrances.map((f) => {
+                        if (fragranceMode === 'none') {
+                          return (
+                            <span key={f} className="text-sm bg-amber-50 text-amber-800 px-3 py-1 rounded-full border border-amber-200">
+                              {f}
+                            </span>
+                          )
+                        }
+                        const isSelected = selectedFragranceList.includes(f)
+                        return (
+                          <button
+                            key={f}
+                            onClick={() => {
+                              if (fragranceMode === 'single') {
+                                setSelectedFragranceList(isSelected ? [] : [f])
+                              } else {
+                                toggleFragrance(f)
+                              }
+                              setSelectionError('')
+                            }}
+                            className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
+                              isSelected
+                                ? 'border-amber-500 bg-amber-100 text-amber-800 font-medium'
+                                : 'border-warm-200 text-warm-700 hover:border-amber-300 hover:bg-amber-50'
+                            }`}
+                          >
+                            {f}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Colors */}
+              {colors.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-warm-800">
+                      Color{colorMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
+                    </p>
+                    {colorMode === 'single' && selectedColor && (
+                      <span className="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded-full truncate max-w-[7rem]">
+                        {selectedColor}
+                      </span>
+                    )}
+                    {colorMode === 'multi' && selectedColorList.length > 0 && (
+                      <span className="text-xs bg-amber-100 text-amber-700 font-medium px-2 py-0.5 rounded-full">
+                        {selectedColorList.length} selected
+                      </span>
+                    )}
+                  </div>
+                  {colors.length > SEARCH_THRESHOLD ? (
+                    <div className="rounded-xl border border-warm-300 shadow-sm overflow-hidden">
+                      {/* Search bar */}
+                      <div className="flex items-center gap-2 px-3 py-2.5 bg-amber-50/60 border-b border-warm-200">
+                        <MagnifyingGlassIcon className="h-3.5 w-3.5 text-warm-400 flex-shrink-0" />
+                        <input
+                          type="text"
+                          value={colorSearch}
+                          onChange={(e) => setColorSearch(e.target.value)}
+                          placeholder="Search colors..."
+                          className="w-full text-sm bg-transparent outline-none text-warm-700 placeholder-warm-400"
+                        />
+                      </div>
+                      {/* List */}
+                      <div className="max-h-44 overflow-y-auto bg-white">
+                        {filteredColors.length === 0 ? (
+                          <div className="py-6 text-xs text-warm-400 text-center">No results</div>
+                        ) : filteredColors.map((c, i) => {
+                          if (colorMode === 'none') {
+                            return (
+                              <div key={c} className={`px-3 py-2.5 text-sm text-warm-700 ${i % 2 === 0 ? 'bg-white' : 'bg-warm-50/40'}`}>
+                                {c}
+                              </div>
+                            )
+                          }
+                          const isSelected = colorMode === 'multi' ? selectedColorList.includes(c) : selectedColor === c
+                          return (
+                            <button
+                              key={c}
+                              onClick={() => {
+                                if (colorMode === 'multi') {
+                                  setSelectedColorList((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c])
+                                } else {
+                                  setSelectedColor(isSelected ? null : c)
+                                }
+                                setSelectionError('')
+                              }}
+                              className={`w-full text-left px-3 py-2.5 text-sm transition-colors flex items-center justify-between border-b border-warm-100 last:border-0 ${
+                                isSelected
+                                  ? 'bg-amber-100 text-amber-900 font-medium'
+                                  : 'text-warm-700 hover:bg-amber-50'
+                              }`}
+                            >
+                              <span className="truncate pr-2">{c}</span>
+                              {isSelected && (
+                                <span className="flex-shrink-0 w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                                  <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8"><path stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" d="M1 4l3 3 5-6"/></svg>
+                                </span>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {colors.map((c) => {
+                        if (colorMode === 'none') {
+                          return (
+                            <span key={c} className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200">
+                              {c}
+                            </span>
+                          )
+                        }
+                        const isSelected = colorMode === 'multi' ? selectedColorList.includes(c) : selectedColor === c
+                        return (
+                          <button
+                            key={c}
+                            onClick={() => {
+                              if (colorMode === 'multi') {
+                                setSelectedColorList((prev) => prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c])
+                              } else {
+                                setSelectedColor(isSelected ? null : c)
+                              }
+                              setSelectionError('')
+                            }}
+                            className={`text-sm px-3 py-1 rounded-full border-2 transition-colors ${
+                              isSelected
+                                ? 'border-amber-500 bg-amber-100 text-amber-800 font-medium'
+                                : 'border-warm-200 text-warm-700 hover:border-amber-300 hover:bg-amber-50'
+                            }`}
+                          >
+                            {c}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
           )}
 
-          {/* Case 1: Base picker + Size picker */}
-          {!isPackagingOnly && (
-            <>
-              {/* Base picker (only shown if multiple bases and mode is not 'none') */}
-              {hasMultipleBases && baseMode !== 'none' && (
-                <div className="mb-5">
-                  <p className="text-sm font-medium text-warm-700 mb-2">
-                    Base<span className="text-red-500 ml-0.5">*</span>
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {uniqueBases.map((base) => (
-                      <button
-                        key={base}
-                        onClick={() => handleBaseSelect(base)}
-                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
-                          selectedBaseName === base
-                            ? 'border-amber-600 bg-amber-50 text-amber-700 font-medium'
-                            : 'border-warm-200 hover:border-warm-300 text-warm-700'
-                        }`}
-                      >
-                        {base}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Size picker */}
-              {baseVariants.length > 0 && (
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-warm-700 mb-2">Size</label>
-                  <div className="flex flex-wrap gap-2">
-                    {baseVariants.map((variant) => (
-                      <button
-                        key={variant.id}
-                        onClick={() => setSelectedVariant(variant)}
-                        className={`px-4 py-2 rounded-lg border-2 transition-colors text-sm ${
-                          currentVariant.id === variant.id
-                            ? 'border-amber-600 bg-amber-50 text-amber-700'
-                            : 'border-warm-200 hover:border-warm-300 text-warm-700'
-                        }`}
-                      >
-                        {variant.options?.size || variant.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </>
+          {selectionError && (
+            <p className="text-sm text-red-500 mb-4">{selectionError}</p>
           )}
 
           {/* Quantity */}

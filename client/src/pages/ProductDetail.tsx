@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { ChevronLeftIcon, ChevronRightIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { useProduct } from '../hooks/useProducts'
@@ -36,12 +36,13 @@ export default function ProductDetail() {
     setZoomPos({ x, y })
   }
 
-  // Set defaults when product loads
-  if (product && !selectedVariant) {
+  // Set defaults once when product loads
+  useEffect(() => {
+    if (!product) return
     const defaultVariant = product.variants.find((v) => v.isDefault) || product.variants[0]
     if (defaultVariant) {
       setSelectedVariant(defaultVariant)
-      if (defaultVariant.options?.base && !selectedBaseName) {
+      if (defaultVariant.options?.base) {
         setSelectedBaseName(defaultVariant.options.base)
       }
     }
@@ -52,13 +53,14 @@ export default function ProductDetail() {
     const initPackagingMode = metaRaw?.packagingMode || 'none'
     const isPackagingOnlyProduct = product.variants.length > 0 &&
       product.variants.every((v) => v.options?.packaging && !v.options?.base)
-    if (!isPackagingOnlyProduct && initPackagingMode === 'single' && initPackaging.length > 0 && selectedPackagingList.length === 0) {
+    if (!isPackagingOnlyProduct && initPackagingMode === 'single' && initPackaging.length > 0) {
       const cheapest = initPackaging.reduce((min, p) =>
         (Number(initPackagingPrices[p]) || 0) < (Number(initPackagingPrices[min]) || 0) ? p : min
       , initPackaging[0])
       setSelectedPackagingList([cheapest])
     }
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id])
 
   if (isLoading) {
     return (
@@ -551,10 +553,10 @@ export default function ProductDetail() {
                             <button
                               key={f}
                               onClick={() => {
-                                if (fragranceMode === 'single') {
-                                  setSelectedFragranceList(isSelected ? [] : [f])
-                                } else {
+                                if (fragranceMode === 'multi') {
                                   toggleFragrance(f)
+                                } else {
+                                  setSelectedFragranceList(isSelected ? [] : [f])
                                 }
                                 setSelectionError('')
                               }}

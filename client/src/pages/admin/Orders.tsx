@@ -234,6 +234,18 @@ export function AdminOrderDetail() {
                       <p className="text-sm text-warm-500">{item.variantName}</p>
                     )}
                     <p className="text-sm text-warm-500">SKU: {item.sku || '-'}</p>
+                    {item.metadata?.note && (
+                      <div className="mt-1.5 space-y-0.5">
+                        {item.metadata.note.split(' | ').map((part, i) => {
+                          const [label, ...rest] = part.split(': ')
+                          return (
+                            <p key={i} className="text-xs text-warm-500">
+                              <span className="font-medium text-warm-600">{label}:</span> {rest.join(': ')}
+                            </p>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-warm-600">Qty: {item.quantity}</p>
@@ -339,6 +351,14 @@ export function AdminOrderDetail() {
               {order.shippingAddress.phone && <p>{order.shippingAddress.phone}</p>}
             </div>
           </div>
+
+          {/* Customer Notes */}
+          {order.metadata?.customerNotes && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+              <h2 className="font-semibold text-warm-900 mb-2">Customer Notes</h2>
+              <p className="text-sm text-warm-700 whitespace-pre-wrap">{order.metadata.customerNotes}</p>
+            </div>
+          )}
         </div>
       </div>
     </div>

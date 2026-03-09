@@ -23,6 +23,8 @@ export default function ProductDetail() {
   const [selectedColorList, setSelectedColorList] = useState<string[]>([])
   const [selectedFragranceList, setSelectedFragranceList] = useState<string[]>([])
   const [selectedPackagingList, setSelectedPackagingList] = useState<string[]>([])
+  const [selectedCustomisations, setSelectedCustomisations] = useState<string[]>([])
+  const [customisationNotes, setCustomisationNotes] = useState<Record<string, string>>({})
   const [selectionError, setSelectionError] = useState('')
   const [isHoveringImage, setIsHoveringImage] = useState(false)
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 })
@@ -122,6 +124,9 @@ export default function ProductDetail() {
     packaging?: string[]
     packagingPrices?: Record<string, number>
     packagingMode?: string
+    customisations?: string[]
+    customisationPrices?: Record<string, number>
+    customisationMode?: string
   } | undefined
   const fragrances = meta?.fragrances?.filter(Boolean) || []
   const colors = meta?.colors?.filter(Boolean) || []
@@ -131,6 +136,10 @@ export default function ProductDetail() {
   const colorMode = meta?.colorMode || 'none'
   const fragranceMode = meta?.fragranceMode || 'none'
   const packagingMode = meta?.packagingMode || 'none'
+  const customisations = meta?.customisations?.filter(Boolean) || []
+  const customisationPricesMap = meta?.customisationPrices || {}
+  const customisationMode = meta?.customisationMode || 'none'
+  const enabledCustomisations = customisations.map((name) => ({ name, price: Number(customisationPricesMap[name] || 0) }))
 
   // Case 2: packaging-only product (variants have options.packaging, no options.base)
   const isPackagingOnly = product.variants.length > 0 &&
@@ -140,7 +149,11 @@ export default function ProductDetail() {
   const packagingAddon = !isPackagingOnly && selectedPackagingList.length > 0
     ? selectedPackagingList.reduce((sum, name) => sum + (Number(packagingPrices[name]) || 0), 0)
     : 0
-  const price = basePrice + packagingAddon
+  const customisationAddon = selectedCustomisations.reduce((sum, name) => {
+    const opt = enabledCustomisations.find((c) => c.name === name)
+    return sum + (opt?.price || 0)
+  }, 0)
+  const price = basePrice + packagingAddon + customisationAddon
   const mrp = currentVariant.comparePrice ? Number(currentVariant.comparePrice) : null
   const hasDiscount = mrp !== null && mrp > basePrice
   const discountPct = hasDiscount ? Math.round(((mrp! - basePrice) / mrp!) * 100) : 0
@@ -203,6 +216,13 @@ export default function ProductDetail() {
     if (colorSelection.length > 0) noteParts.push(`Color: ${colorSelection.join(', ')}`)
     if (selectedFragranceList.length > 0) noteParts.push(`Fragrance: ${selectedFragranceList.join(', ')}`)
     if (selectedPackagingList.length > 0) noteParts.push(`Packaging: ${selectedPackagingList.join(', ')}`)
+    if (selectedCustomisations.length > 0) {
+      const customisationDetails = selectedCustomisations.map((name) => {
+        const note = customisationNotes[name]?.trim()
+        return note ? `${name} (${note})` : name
+      })
+      noteParts.push(`Customisations: ${customisationDetails.join(', ')}`)
+    }
     const note = noteParts.join(' | ') || undefined
 
     setIsAddingToCart(true)
@@ -334,20 +354,6 @@ export default function ProductDetail() {
 
         {/* Product Info */}
         <div>
-          {/* Categories */}
-          {product.categories.length > 0 && (
-            <div className="flex gap-2 mb-4 flex-wrap">
-              {product.categories.map((c) => (
-                <Link
-                  key={c.category.id}
-                  to={`/products?category=${c.category.slug}`}
-                  className="text-xs font-medium text-amber-600 bg-amber-50 px-3 py-1 rounded-full hover:bg-amber-100 transition-colors"
-                >
-                  {c.category.name}
-                </Link>
-              ))}
-            </div>
-          )}
 
           {/* Name */}
           <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-4">
@@ -723,6 +729,85 @@ export default function ProductDetail() {
                 </div>
               )}
 
+            </div>
+          )}
+
+          {/* Customisations */}
+          {enabledCustomisations.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm font-medium text-warm-700 mb-2">
+                Customisations
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {enabledCustomisations.map(({ name, price: addonPrice }) => {
+                  if (customisationMode === 'none') {
+                    return (
+                      <span key={name} className="text-sm bg-warm-50 text-warm-700 px-3 py-1 rounded-full border border-warm-200 capitalize">
+                        {name}{addonPrice > 0 && <span className="ml-1 text-warm-500">+₹{addonPrice}</span>}
+                      </span>
+                    )
+                  }
+                  const isSelected = selectedCustomisations.includes(name)
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => {
+                        if (customisationMode === 'single') {
+                          if (isSelected) {
+                            setSelectedCustomisations([])
+                            setCustomisationNotes((prev) => { const n = { ...prev }; delete n[name]; return n })
+                          } else {
+                            setSelectedCustomisations([name])
+                          }
+                        } else {
+                          if (isSelected) {
+                            setSelectedCustomisations((prev) => prev.filter((x) => x !== name))
+                            setCustomisationNotes((prev) => { const n = { ...prev }; delete n[name]; return n })
+                          } else {
+                            setSelectedCustomisations((prev) => [...prev, name])
+                          }
+                        }
+                        setSelectionError('')
+                      }}
+                      className={`text-sm px-3 py-1.5 rounded-full border-2 transition-colors capitalize ${
+                        isSelected
+                          ? 'border-amber-500 bg-amber-50 text-amber-800 font-medium'
+                          : 'border-warm-200 text-warm-700 hover:border-amber-300'
+                      }`}
+                    >
+                      {name}
+                      {addonPrice > 0 && (
+                        <span className={`ml-1.5 text-xs ${isSelected ? 'text-amber-600' : 'text-warm-400'}`}>
+                          +₹{addonPrice}
+                        </span>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+              {customisationAddon > 0 && (
+                <p className="text-xs text-amber-700 mt-2">
+                  Customisation add-on: +₹{customisationAddon}
+                </p>
+              )}
+              {selectedCustomisations.length > 0 && (
+                <div className="mt-3 space-y-2">
+                  {selectedCustomisations.map((name) => (
+                    <div key={name}>
+                      <label className="block text-xs font-medium text-warm-600 mb-1 capitalize">
+                        {name} — add a note <span className="text-warm-400 font-normal">(optional)</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={`e.g. "Happy Birthday John!"`}
+                        value={customisationNotes[name] || ''}
+                        onChange={(e) => setCustomisationNotes((prev) => ({ ...prev, [name]: e.target.value }))}
+                        className="w-full px-3 py-2 rounded-lg border border-warm-200 text-sm text-warm-800 placeholder-warm-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 

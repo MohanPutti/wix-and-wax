@@ -22,6 +22,7 @@ export default function Cart() {
   const [discountCode, setDiscountCode] = useState('')
   const [discountError, setDiscountError] = useState('')
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
+  const [orderNotes, setOrderNotes] = useState('')
 
   // Initialize selectedItems when cart loads or changes
   useEffect(() => {
@@ -131,7 +132,7 @@ export default function Cart() {
         variantId: item.variantId,
         quantity: item.quantity
       }))
-    navigate('/checkout', { state: { selectedItems: selectedItemsData } })
+    navigate('/checkout', { state: { selectedItems: selectedItemsData, orderNotes: orderNotes.trim() || undefined } })
   }
 
   return (
@@ -254,6 +255,20 @@ export default function Cart() {
                   <span>₹{estimatedTotal.toFixed(2)}</span>
                 </div>
               </div>
+            </div>
+
+            {/* Order Notes */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-warm-700 mb-1.5">
+                Order Notes <span className="text-warm-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                rows={3}
+                placeholder="Any special instructions for your order..."
+                value={orderNotes}
+                onChange={(e) => setOrderNotes(e.target.value)}
+                className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-1 focus:ring-amber-500 focus:border-amber-500 resize-none"
+              />
             </div>
 
             {/* Checkout Button */}

@@ -68,8 +68,10 @@ export default function Checkout() {
   const isAuthenticated = useAppSelector(selectIsAuthenticated)
   const { addresses, isLoading: addressesLoading, getDefaultAddress } = useAddresses()
 
-  // Get selected items from navigation state (passed from Cart page)
-  const selectedItemsFromCart = (location.state as { selectedItems?: Array<{ id: string; variantId: string; quantity: number }> })?.selectedItems
+  // Get selected items and order notes from navigation state (passed from Cart page)
+  const locationState = location.state as { selectedItems?: Array<{ id: string; variantId: string; quantity: number }>; orderNotes?: string } | null
+  const selectedItemsFromCart = locationState?.selectedItems
+  const orderNotesFromCart = locationState?.orderNotes
 
   // Filter cart items to only include selected ones
   const itemsToCheckout = useMemo(() => {
@@ -329,6 +331,7 @@ export default function Checkout() {
         email: isAuthenticated ? undefined : email,
         shippingAddress,
         items: checkoutItems, // Send only selected items for partial checkout
+        orderNotes: orderNotesFromCart,
       })
 
       if (response.success) {
@@ -628,6 +631,14 @@ export default function Checkout() {
                   </div>
                 </div>
               </div>
+
+              {/* Order Notes */}
+              {orderNotesFromCart && (
+                <div className="mb-6 p-3 bg-warm-50 border border-warm-200 rounded-lg">
+                  <p className="text-xs font-medium text-warm-600 mb-1">Order Notes</p>
+                  <p className="text-sm text-warm-700">{orderNotesFromCart}</p>
+                </div>
+              )}
 
               {/* Place Order Button */}
               <Button type="submit" size="lg" className="w-full" isLoading={isSubmitting}>

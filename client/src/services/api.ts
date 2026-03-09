@@ -13,6 +13,7 @@ import type {
   Fragrance,
   Color,
   Packaging,
+  Customisation,
   Discount,
 } from '../types'
 
@@ -249,6 +250,21 @@ class ApiClient {
     return this.request<ApiResponse<{ id: string }>>(`/packaging/${id}`, { method: 'DELETE' })
   }
 
+  async getCustomisations() {
+    return this.request<ApiResponse<Customisation[]>>('/customisations')
+  }
+
+  async createCustomisation(name: string) {
+    return this.request<ApiResponse<Customisation>>('/customisations', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  }
+
+  async deleteCustomisation(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/customisations/${id}`, { method: 'DELETE' })
+  }
+
   // Category endpoints
   async getCategories(status?: string) {
     const q = status ? `?status=${status}` : ''
@@ -356,6 +372,7 @@ class ApiClient {
     shippingAddress: Address
     billingAddress?: Address
     items?: Array<{ variantId: string; quantity: number }> // Optional: for partial checkout
+    orderNotes?: string
   }) {
     return this.request<ApiResponse<Order>>('/checkout', {
       method: 'POST',

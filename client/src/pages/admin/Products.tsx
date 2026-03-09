@@ -9,7 +9,7 @@ import Spinner from '../../components/ui/Spinner'
 import Input from '../../components/ui/Input'
 import Select from '../../components/ui/Select'
 import ImageUpload from '../../components/admin/ImageUpload'
-import type { ProductVariant, ProductBase, Fragrance, Color, Packaging } from '../../types'
+import type { ProductVariant, ProductBase, Fragrance, Color, Packaging, Customisation } from '../../types'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning'> = {
   draft: 'default',
@@ -292,9 +292,10 @@ interface MultiSelectChipsProps {
   placeholder?: string
   mode: SelectionMode
   onModeChange: (mode: SelectionMode) => void
+  hideMode?: boolean
 }
 
-function MultiSelectChips({ label, all, selected, onChange, placeholder, mode, onModeChange }: MultiSelectChipsProps) {
+function MultiSelectChips({ label, all, selected, onChange, placeholder, mode, onModeChange, hideMode }: MultiSelectChipsProps) {
   const toggle = (name: string) => {
     if (selected.includes(name)) {
       onChange(selected.filter((s) => s !== name))
@@ -324,23 +325,25 @@ function MultiSelectChips({ label, all, selected, onChange, placeholder, mode, o
       </div>
 
       {/* Selection mode */}
-      <div className="flex gap-3 mb-3">
-        {(['none', 'single', 'multi'] as SelectionMode[]).map((m) => (
-          <label key={m} className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="radio"
-              name={`${label}-mode`}
-              value={m}
-              checked={mode === m}
-              onChange={() => onModeChange(m)}
-              className="text-amber-600 focus:ring-amber-500"
-            />
-            <span className="text-xs text-warm-600 capitalize">
-              {m === 'none' ? 'Display only' : m === 'single' ? 'Single select' : 'Multi select'}
-            </span>
-          </label>
-        ))}
-      </div>
+      {!hideMode && (
+        <div className="flex gap-3 mb-3">
+          {(['none', 'single', 'multi'] as SelectionMode[]).map((m) => (
+            <label key={m} className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                name={`${label}-mode`}
+                value={m}
+                checked={mode === m}
+                onChange={() => onModeChange(m)}
+                className="text-amber-600 focus:ring-amber-500"
+              />
+              <span className="text-xs text-warm-600 capitalize">
+                {m === 'none' ? 'Display only' : m === 'single' ? 'Single select' : 'Multi select'}
+              </span>
+            </label>
+          ))}
+        </div>
+      )}
 
       {all.length === 0 ? (
         <p className="text-sm text-warm-400 italic">
@@ -456,6 +459,7 @@ export function AdminProductForm() {
   const [fragrances, setFragrances] = useState<Fragrance[]>([])
   const [colors, setColors] = useState<Color[]>([])
   const [packagingList, setPackagingList] = useState<Packaging[]>([])
+  const [customisationsList, setCustomisationsList] = useState<Customisation[]>([])
 
   // Multi-base: array of selected bases + per-base size maps (keyed by base name)
   const [selectedBases, setSelectedBases] = useState<ProductBase[]>([])
@@ -472,15 +476,19 @@ export function AdminProductForm() {
   const [fragranceMode, setFragranceMode] = useState<SelectionMode>('none')
   const [colorMode, setColorMode] = useState<SelectionMode>('none')
   const [packagingMode, setPackagingMode] = useState<SelectionMode>('none')
+  const [selectedCustomisations, setSelectedCustomisations] = useState<string[]>([])
+  const [customisationPrices, setCustomisationPrices] = useState<Record<string, string>>({})
+  const [customisationMode, setCustomisationMode] = useState<SelectionMode>('none')
 
   // Load catalog data — use allSettled so one failure doesn't wipe the rest
   useEffect(() => {
-    Promise.allSettled([api.getBases(), api.getFragrances(), api.getColors(), api.getPackaging()]).then(
-      ([b, f, c, p]) => {
+    Promise.allSettled([api.getBases(), api.getFragrances(), api.getColors(), api.getPackaging(), api.getCustomisations()]).then(
+      ([b, f, c, p, cu]) => {
         if (b.status === 'fulfilled' && b.value.success) setBases(b.value.data)
         if (f.status === 'fulfilled' && f.value.success) setFragrances(f.value.data)
         if (c.status === 'fulfilled' && c.value.success) setColors(c.value.data)
         if (p.status === 'fulfilled' && p.value.success) setPackagingList(p.value.data)
+        if (cu.status === 'fulfilled' && cu.value.success) setCustomisationsList(cu.value.data)
       }
     )
   }, [])
@@ -505,6 +513,9 @@ export function AdminProductForm() {
         fragranceMode?: SelectionMode
         colorMode?: SelectionMode
         packagingMode?: SelectionMode
+        customisations?: string[]
+        customisationPrices?: Record<string, string>
+        customisationMode?: SelectionMode
       } | undefined
       setSelectedFragrances(meta?.fragrances || [])
       setSelectedColors(meta?.colors || [])
@@ -512,6 +523,9 @@ export function AdminProductForm() {
       setFragranceMode(meta?.fragranceMode || 'none')
       setColorMode(meta?.colorMode || 'none')
       setPackagingMode(meta?.packagingMode || 'none')
+      setCustomisationMode(meta?.customisationMode || 'none')
+      setSelectedCustomisations(meta?.customisations || [])
+      setCustomisationPrices(meta?.customisationPrices || {})
 
       // Detect Case 2 (packaging-only): variants have options.packaging but no options.base
       const isPackagingOnly = product.variants.length > 0 &&
@@ -641,6 +655,9 @@ export function AdminProductForm() {
         fragranceMode,
         colorMode,
         packagingMode,
+        customisations: selectedCustomisations.length > 0 ? selectedCustomisations : undefined,
+        customisationPrices: selectedCustomisations.length > 0 ? customisationPrices : undefined,
+        customisationMode,
       }
 
       if (isEditMode && id) {
@@ -1040,6 +1057,40 @@ export function AdminProductForm() {
                           />
                         </div>
                       )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Customisations */}
+            <div className="bg-white rounded-xl p-6 shadow-soft">
+              <h2 className="font-semibold text-warm-900 mb-1">Customisations</h2>
+              <p className="text-sm text-warm-500 mb-4">Optional add-ons the customer can select (e.g. sticker, card). Set the extra cost per option. Manage available options in Catalog.</p>
+              <MultiSelectChips
+                label="Available Customisations"
+                all={customisationsList}
+                selected={selectedCustomisations}
+                onChange={setSelectedCustomisations}
+                placeholder="No customisations added yet. Go to Catalog to add them."
+                mode={customisationMode}
+                onModeChange={setCustomisationMode}
+              />
+              {selectedCustomisations.length > 0 && (
+                <div className="mt-5 space-y-3">
+                  <p className="text-xs font-semibold text-warm-500 uppercase tracking-wider">Add-on Price per Customisation</p>
+                  {selectedCustomisations.map((name) => (
+                    <div key={name} className="rounded-xl border-2 border-warm-200 px-4 py-3">
+                      <span className="text-sm font-semibold text-warm-900 block mb-2">{name}</span>
+                      <div className="flex items-center gap-2">
+                        <label className="text-xs font-medium text-warm-600 whitespace-nowrap">Add-on (₹)</label>
+                        <input
+                          type="number" min="0" step="1" placeholder="e.g. 50"
+                          value={customisationPrices[name] || ''}
+                          onChange={(e) => setCustomisationPrices((prev) => ({ ...prev, [name]: e.target.value }))}
+                          className="w-28 px-3 py-1.5 rounded-lg border border-warm-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

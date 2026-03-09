@@ -398,6 +398,35 @@ app.delete('/api/packaging/:id', requireAuth, async (req, res) => {
   }
 })
 
+// --- Customisations ---
+app.get('/api/customisations', async (_req, res) => {
+  try {
+    const customisations = await prisma.customisation.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: customisations })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch customisations' })
+  }
+})
+
+app.post('/api/customisations', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body as { name: string }
+    const c = await prisma.customisation.create({ data: { id: uuidv4(), name } })
+    res.json({ success: true, data: c })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to create customisation' })
+  }
+})
+
+app.delete('/api/customisations/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.customisation.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to delete customisation' })
+  }
+})
+
 // Sync product images directly via Prisma (bypasses core URL validation)
 app.put('/api/products/:id/images/sync', requireAuth, async (req, res) => {
   try {
@@ -784,7 +813,8 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
       sessionId,
       shippingAddress,
       email: guestEmail,
-      items: selectedItems // Optional: Array<{ variantId: string, quantity: number }>
+      items: selectedItems, // Optional: Array<{ variantId: string, quantity: number }>
+      orderNotes: customerOrderNotes,
     } = req.body
 
     // Validate required fields
@@ -834,7 +864,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
 
     // Determine which items to checkout
     // If selectedItems provided, validate and use those; otherwise checkout entire cart
-    type CheckoutItem = { variantId: string; quantity: number; cartItemId: string }
+    type CheckoutItem = { variantId: string; quantity: number; cartItemId: string; metadata?: object | null }
     let itemsToCheckout: CheckoutItem[] = []
 
     if (selectedItems && Array.isArray(selectedItems) && selectedItems.length > 0) {
@@ -861,6 +891,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
           variantId: selected.variantId,
           quantity: quantity,
           cartItemId: cartItem.id,
+          metadata: cartItem.metadata as object | null,
         })
       }
     } else {
@@ -869,6 +900,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
         variantId: item.variantId,
         quantity: item.quantity,
         cartItemId: item.id,
+        metadata: item.metadata as object | null,
       }))
     }
 
@@ -923,6 +955,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
         price: price,
         total: itemTotal,
         cartItemId: item.cartItemId,
+        metadata: item.metadata,
       })
     }
 
@@ -980,6 +1013,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
         total,
         currency: 'INR',
         shippingAddress: shippingAddress as object,
+        ...(customerOrderNotes ? { metadata: { customerNotes: customerOrderNotes } } : {}),
         items: {
           create: orderItems.map(item => ({
             variantId: item.variantId,
@@ -989,6 +1023,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
             quantity: item.quantity,
             price: item.price,
             total: item.total,
+            ...(item.metadata ? { metadata: item.metadata as object } : {}),
           })),
         },
       },

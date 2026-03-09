@@ -4,17 +4,6 @@ import Button from '../ui/Button'
 import { useAppDispatch } from '../../store/hooks'
 import { addToCart } from '../../store/slices/cartSlice'
 
-const SLUG_TO_GROUP: Record<string, string> = {
-  'jar-candles': 'Shop', 'scented-sachets': 'Shop', 'tealights': 'Shop',
-  'gift-boxes': 'Shop', 'custom-name-candles': 'Shop', 'new-arrivals': 'Shop', 'bestsellers': 'Shop',
-  'birthdays': 'Occasions', 'baby-showers': 'Occasions', 'anniversaries': 'Occasions',
-  'housewarming': 'Occasions', 'festivals': 'Occasions', 'return-favors': 'Occasions',
-  'wedding-favors': 'Wedding & Events', 'mehendi-haldi': 'Wedding & Events',
-  'bridal-shower': 'Wedding & Events', 'save-the-date': 'Wedding & Events',
-  'luxury-hampers': 'Wedding & Events', 'bulk-events': 'Wedding & Events',
-  'corporate': 'Corporate', 'client-gifts': 'Corporate', 'welcome-kits': 'Corporate',
-  'festive-hampers': 'Corporate', 'brand-candles': 'Corporate',
-}
 
 interface ProductCardProps {
   product: Product
@@ -58,18 +47,6 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       {/* Content */}
       <div className="p-4 flex flex-col flex-1">
-        {/* Categories */}
-        {product.categories.length > 0 && (() => {
-          const labels = [...new Set(
-            product.categories
-              .map((c) => SLUG_TO_GROUP[c.category.slug] || c.category.name)
-              .filter((label) => label !== 'featured')
-          )]
-          return labels.length > 0 ? (
-            <p className="text-xs text-amber-600 font-medium mb-1">{labels.join(', ')}</p>
-          ) : null
-        })()}
-
         {/* Name */}
         <h3 className="font-serif text-lg font-medium text-warm-900 group-hover:text-amber-700 transition-colors">
           {product.name}

@@ -60,10 +60,17 @@ export interface ProductVariant {
   isDefault: boolean
 }
 
+export interface Customisation {
+  id: string
+  name: string
+}
+
 // Product metadata for fragrances and colors
 export interface ProductMetadata {
   fragrances?: string[]
   colors?: string[]
+  customisations?: string[]
+  customisationPrices?: Record<string, number>
 }
 
 export interface ProductImage {
@@ -107,6 +114,7 @@ export interface CartItem {
   variantId: string
   quantity: number
   price: number
+  metadata?: { note?: string }
   variant: ProductVariant & {
     product: Product
   }
@@ -159,6 +167,7 @@ export interface OrderItem {
   price: number
   total: number
   fulfilledQty: number
+  metadata?: { note?: string; [key: string]: unknown }
 }
 
 export interface Order {
@@ -178,6 +187,7 @@ export interface Order {
   shippingAddress: Address
   billingAddress?: Address
   notes?: string
+  metadata?: { customerNotes?: string; [key: string]: unknown }
   items: OrderItem[]
   createdAt: string
   updatedAt: string

@@ -3,15 +3,15 @@ import { PlusIcon, TrashIcon, PencilIcon, XMarkIcon, CheckIcon, LinkIcon } from 
 import { api } from '../../services/api'
 import Button from '../../components/ui/Button'
 import Spinner from '../../components/ui/Spinner'
-import type { ProductBase, Fragrance, Color, Packaging, Product } from '../../types'
+import type { ProductBase, Fragrance, Color, Packaging, Customisation, Product } from '../../types'
 
-type Tab = 'bases' | 'fragrances' | 'colors' | 'packaging'
+type Tab = 'bases' | 'fragrances' | 'colors' | 'packaging' | 'customisations'
 
 // ─── Tag Products Modal ────────────────────────────────────────────────────────
 
 interface TagProductsModalProps {
   itemName: string
-  field: 'fragrances' | 'colors'
+  field: 'fragrances' | 'colors' | 'customisations'
   onClose: () => void
 }
 
@@ -52,7 +52,10 @@ function TagProductsModal({ itemName, field, onClose }: TagProductsModalProps) {
           const meta = (product.metadata as Record<string, unknown>) || {}
           const existing = (meta[field] as string[]) || []
           if (existing.includes(itemName)) return Promise.resolve()
-          return api.updateProduct(id, { metadata: { ...meta, [field]: [...existing, itemName] } } as any)
+          const extraMeta = field === 'customisations' && !meta.customisationMode
+            ? { customisationMode: 'single' }
+            : {}
+          return api.updateProduct(id, { metadata: { ...meta, [field]: [...existing, itemName], ...extraMeta } } as any)
         })
       )
     } finally {
@@ -773,9 +776,10 @@ interface SimpleListPanelProps {
   onLink: (name: string) => void
   namePlaceholder: string
   withHex?: boolean
+  hideLink?: boolean
 }
 
-function SimpleListPanel({ items, isLoading, onAdd, onDelete, onLink, namePlaceholder, withHex }: SimpleListPanelProps) {
+function SimpleListPanel({ items, isLoading, onAdd, onDelete, onLink, namePlaceholder, withHex, hideLink }: SimpleListPanelProps) {
   const [newName, setNewName] = useState('')
   const [newHex, setNewHex] = useState('')
   const [isAdding, setIsAdding] = useState(false)
@@ -853,13 +857,15 @@ function SimpleListPanel({ items, isLoading, onAdd, onDelete, onLink, namePlaceh
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => onLink(item.name)}
-                    className="p-2 text-warm-400 hover:text-amber-600 transition-colors"
-                    title="Link to products"
-                  >
-                    <LinkIcon className="h-5 w-5" />
-                  </button>
+                  {!hideLink && (
+                    <button
+                      onClick={() => onLink(item.name)}
+                      className="p-2 text-warm-400 hover:text-amber-600 transition-colors"
+                      title="Link to products"
+                    >
+                      <LinkIcon className="h-5 w-5" />
+                    </button>
+                  )}
                   <button
                     onClick={() => onDelete(item.id, item.name)}
                     className="p-2 text-warm-400 hover:text-red-600 transition-colors"
@@ -884,11 +890,13 @@ export default function AdminCatalog() {
   const [fragrances, setFragrances] = useState<Fragrance[]>([])
   const [colors, setColors] = useState<Color[]>([])
   const [packagingList, setPackagingList] = useState<Packaging[]>([])
+  const [customisationsList, setCustomisationsList] = useState<Customisation[]>([])
   const [isLoadingFragrances, setIsLoadingFragrances] = useState(true)
   const [isLoadingColors, setIsLoadingColors] = useState(true)
   const [isLoadingPackaging, setIsLoadingPackaging] = useState(true)
+  const [isLoadingCustomisations, setIsLoadingCustomisations] = useState(true)
 
-  const [tagModal, setTagModal] = useState<{ name: string; field: 'fragrances' | 'colors' } | null>(null)
+  const [tagModal, setTagModal] = useState<{ name: string; field: 'fragrances' | 'colors' | 'customisations' } | null>(null)
   const [packagingLinkModal, setPackagingLinkModal] = useState<string | null>(null)
 
   const loadFragrances = async () => {
@@ -912,10 +920,18 @@ export default function AdminCatalog() {
     setIsLoadingPackaging(false)
   }
 
+  const loadCustomisations = async () => {
+    setIsLoadingCustomisations(true)
+    const res = await api.getCustomisations()
+    if (res.success) setCustomisationsList(res.data)
+    setIsLoadingCustomisations(false)
+  }
+
   useEffect(() => {
     loadFragrances()
     loadColors()
     loadPackaging()
+    loadCustomisations()
   }, [])
 
   const addFragrance = async (name: string) => {
@@ -994,11 +1010,24 @@ export default function AdminCatalog() {
     await loadPackaging()
   }
 
+  const addCustomisation = async (name: string) => {
+    await api.createCustomisation(name)
+    await loadCustomisations()
+    setTagModal({ name, field: 'customisations' })
+  }
+
+  const deleteCustomisation = async (id: string, name: string) => {
+    if (!confirm(`Delete customisation "${name}"?`)) return
+    await api.deleteCustomisation(id)
+    await loadCustomisations()
+  }
+
   const tabs: { id: Tab; label: string }[] = [
     { id: 'bases', label: 'Bases' },
     { id: 'fragrances', label: 'Fragrances' },
     { id: 'colors', label: 'Colors' },
     { id: 'packaging', label: 'Packaging' },
+    { id: 'customisations', label: 'Customisations' },
   ]
 
   return (
@@ -1018,7 +1047,7 @@ export default function AdminCatalog() {
       )}
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-semibold text-warm-900">Catalog</h1>
-        <p className="text-warm-500 mt-1">Manage bases, fragrances, colors, and packaging used in your products.</p>
+        <p className="text-warm-500 mt-1">Manage bases, fragrances, colors, packaging, and customisations used in your products.</p>
       </div>
 
       {/* Tabs */}
@@ -1071,6 +1100,17 @@ export default function AdminCatalog() {
           onDelete={deletePackaging}
           onLink={(name) => setPackagingLinkModal(name)}
           namePlaceholder="e.g. Gift Box, Kraft Bag, Ribbon…"
+        />
+      )}
+
+      {tab === 'customisations' && (
+        <SimpleListPanel
+          items={customisationsList}
+          isLoading={isLoadingCustomisations}
+          onAdd={addCustomisation}
+          onDelete={deleteCustomisation}
+          onLink={(name) => setTagModal({ name, field: 'customisations' })}
+          namePlaceholder="e.g. Sticker, Card, Gift Wrap…"
         />
       )}
     </div>

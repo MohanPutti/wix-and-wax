@@ -100,11 +100,23 @@ export default function CartSidebar() {
                               {/* Details */}
                               <div className="flex flex-1 flex-col">
                                 <div className="flex justify-between">
-                                  <div>
+                                  <div className="flex-1 min-w-0 pr-3">
                                     <h3 className="font-medium text-warm-900">
                                       {item.variant?.product?.name || 'Product'}
                                     </h3>
                                     <p className="text-sm text-warm-500">{item.variant?.name || ''}</p>
+                                    {item.metadata?.note && (
+                                      <div className="mt-1.5 space-y-0.5">
+                                        {item.metadata.note.split(' | ').map((part, i) => {
+                                          const [label, ...rest] = part.split(': ')
+                                          return (
+                                            <p key={i} className="text-xs text-warm-500 leading-relaxed">
+                                              <span className="font-medium text-warm-600">{label}:</span> {rest.join(': ')}
+                                            </p>
+                                          )
+                                        })}
+                                      </div>
+                                    )}
                                   </div>
                                   <p className="font-medium text-warm-900">
                                     ₹{(Number(item.price) * item.quantity).toFixed(2)}

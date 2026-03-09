@@ -424,13 +424,52 @@ class ApiClient {
     })
   }
 
-  // Legacy createOrder - kept for admin use only
+  async createManualOrder(data: {
+    email: string
+    firstName: string
+    lastName: string
+    phone?: string
+    shippingAddress: {
+      address1: string
+      address2?: string
+      city: string
+      state?: string
+      postalCode: string
+      country: string
+    }
+    items: Array<{
+      variantId?: string
+      productName: string
+      variantName?: string
+      sku?: string
+      quantity: number
+      price: number
+    }>
+    status?: string
+    paymentStatus?: string
+    notes?: string
+  }) {
+    return this.request<ApiResponse<Order>>('/admin/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async createOrder(data: {
     email: string
     shippingAddress: Address
-    billingAddress?: Address
     notes?: string
-    items: Array<{ variantId: string; quantity: number; price: number; productName: string; variantName?: string }>
+    paymentStatus?: string
+    status?: string
+    metadata?: Record<string, unknown>
+    items: Array<{
+      variantId?: string
+      productName: string
+      variantName?: string
+      sku?: string
+      quantity: number
+      price: number
+    }>
   }) {
     return this.request<ApiResponse<Order>>('/orders', {
       method: 'POST',

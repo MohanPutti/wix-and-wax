@@ -428,6 +428,98 @@ app.delete('/api/customisations/:id', requireAuth, async (req, res) => {
 })
 
 // ============================================================
+// ADMIN MANUAL ORDER CREATION
+// ============================================================
+
+app.post('/api/admin/orders', requireAuth, async (req, res) => {
+  try {
+    const {
+      email,
+      firstName,
+      lastName,
+      phone,
+      shippingAddress,
+      items,
+      status = 'confirmed',
+      paymentStatus = 'paid',
+      notes,
+    } = req.body as {
+      email: string
+      firstName: string
+      lastName: string
+      phone?: string
+      shippingAddress: {
+        address1: string
+        address2?: string
+        city: string
+        state?: string
+        postalCode: string
+        country: string
+      }
+      items: Array<{
+        variantId?: string
+        productName: string
+        variantName?: string
+        sku?: string
+        quantity: number
+        price: number
+      }>
+      status?: string
+      paymentStatus?: string
+      notes?: string
+    }
+
+    if (!email || !items?.length) {
+      return res.status(400).json({ success: false, error: 'Email and at least one item are required' })
+    }
+
+    const subtotal = items.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0)
+    const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        email,
+        status,
+        paymentStatus,
+        fulfillmentStatus: 'unfulfilled',
+        subtotal,
+        discount: 0,
+        tax: 0,
+        shipping: 0,
+        total: subtotal,
+        currency: 'INR',
+        shippingAddress: {
+          firstName,
+          lastName,
+          phone: phone || '',
+          ...shippingAddress,
+        } as object,
+        notes,
+        metadata: { source: 'manual' } as object,
+        items: {
+          create: items.map(item => ({
+            variantId: item.variantId || null,
+            productName: item.productName,
+            variantName: item.variantName || null,
+            sku: item.sku || null,
+            quantity: Number(item.quantity),
+            price: Number(item.price),
+            total: Number(item.price) * Number(item.quantity),
+          })),
+        },
+      },
+      include: { items: true },
+    })
+
+    res.json({ success: true, data: order })
+  } catch (err) {
+    console.error('Manual order creation error:', err)
+    res.status(500).json({ success: false, error: 'Failed to create order' })
+  }
+})
+
+// ============================================================
 // INVENTORY MANAGEMENT
 // ============================================================
 

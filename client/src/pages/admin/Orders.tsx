@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { EyeIcon } from '@heroicons/react/24/outline'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { EyeIcon, PlusIcon } from '@heroicons/react/24/outline'
 import { useOrders, useOrder } from '../../hooks/useOrders'
 import Badge from '../../components/ui/Badge'
 import Select from '../../components/ui/Select'
@@ -25,6 +25,7 @@ const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'd
 }
 
 export function AdminOrderList() {
+  const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -49,7 +50,16 @@ export function AdminOrderList() {
 
   return (
     <div>
-      <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-8">Orders</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="font-serif text-3xl font-semibold text-warm-900">Orders</h1>
+        <button
+          onClick={() => navigate('/admin/orders/new')}
+          className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+        >
+          <PlusIcon className="h-4 w-4" />
+          New Order
+        </button>
+      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 shadow-soft mb-6">

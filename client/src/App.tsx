@@ -28,6 +28,7 @@ import AdminCategories from './pages/admin/Categories'
 import AdminCatalog from './pages/admin/Catalog'
 import AdminDiscounts from './pages/admin/Discounts'
 import AdminInventory from './pages/admin/Inventory'
+import AdminNewOrder from './pages/admin/NewOrder'
 
 // Disable browser scroll restoration before any rendering
 if ('scrollRestoration' in window.history) {
@@ -202,6 +203,14 @@ function AppContent() {
         element={
           <AdminLayout>
             <AdminProductForm />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/orders/new"
+        element={
+          <AdminLayout>
+            <AdminNewOrder />
           </AdminLayout>
         }
       />

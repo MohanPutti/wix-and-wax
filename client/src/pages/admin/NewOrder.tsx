@@ -106,7 +106,6 @@ export default function AdminNewOrder() {
     e.preventDefault()
     setError('')
 
-    if (!email.trim()) { setError('Email is required'); return }
     if (!firstName.trim() || !lastName.trim()) { setError('Customer name is required'); return }
     if (!address1.trim() || !city.trim() || !postalCode.trim()) { setError('Address, city and postal code are required'); return }
     const validItems = items.filter(i => i.productName.trim() && Number(i.price) > 0 && i.quantity > 0)
@@ -159,7 +158,7 @@ export default function AdminNewOrder() {
           <div className="grid grid-cols-2 gap-4">
             <Input label="First Name" value={firstName} onChange={e => setFirstName(e.target.value)} required />
             <Input label="Last Name" value={lastName} onChange={e => setLastName(e.target.value)} required />
-            <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+            <Input label="Email (optional)" type="email" value={email} onChange={e => setEmail(e.target.value)} />
             <Input label="Phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} />
           </div>
         </div>

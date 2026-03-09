@@ -444,7 +444,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
       paymentStatus = 'paid',
       notes,
     } = req.body as {
-      email: string
+      email?: string
       firstName: string
       lastName: string
       phone?: string
@@ -469,8 +469,8 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
       notes?: string
     }
 
-    if (!email || !items?.length) {
-      return res.status(400).json({ success: false, error: 'Email and at least one item are required' })
+    if (!items?.length) {
+      return res.status(400).json({ success: false, error: 'At least one item is required' })
     }
 
     const subtotal = items.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0)
@@ -1020,10 +1020,7 @@ app.post('/api/checkout', optionalAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Shipping address is required' } })
     }
 
-    const email = user?.email || guestEmail
-    if (!email) {
-      return res.status(400).json({ success: false, error: { code: 'BAD_REQUEST', message: 'Email is required' } })
-    }
+    const email = user?.email || guestEmail || undefined
 
     // Get cart - try userId first, then sessionId (for guests or users with guest carts)
     let cart

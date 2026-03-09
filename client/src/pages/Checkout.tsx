@@ -379,11 +379,10 @@ export default function Checkout() {
                 </p>
               )}
               <Input
-                label="Email"
+                label="Email (optional)"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                required
               />
             </div>
 

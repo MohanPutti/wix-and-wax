@@ -53,19 +53,6 @@ export default function Footer() {
                 </a>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { icon: '✍️', label: 'Custom Names & Messages' },
-                { icon: '🌺', label: 'Choose Your Fragrance' },
-                { icon: '🎀', label: 'Custom Packaging' },
-                { icon: '📦', label: 'Bulk & Event Orders' },
-              ].map((feat) => (
-                <div key={feat.label} className="bg-warm-800 rounded-xl p-4 flex items-center gap-3">
-                  <span className="text-2xl">{feat.icon}</span>
-                  <p className="text-sm font-medium text-warm-200">{feat.label}</p>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
       </div>

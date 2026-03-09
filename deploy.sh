@@ -6,7 +6,7 @@ SSH_KEY="~/.ssh/portfolio-parser-key.pem"
 SSH="ssh -i $SSH_KEY"
 
 echo "==> Pulling latest code + submodules on server..."
-$SSH $EC2 "cd /app/wix-and-wax && git pull origin main && git submodule update --init --remote core"
+$SSH $EC2 "cd /app/wix-and-wax && git fetch origin && git reset --hard origin/main && git submodule update --init --force core && cd core && git fetch origin && git reset --hard origin/main && cd .."
 
 echo "==> Building Docker image on server..."
 $SSH $EC2 "cd /app/wix-and-wax && docker build -t wix-and-wax-backend:latest ."

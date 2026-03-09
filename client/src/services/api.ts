@@ -15,6 +15,9 @@ import type {
   Packaging,
   Customisation,
   Discount,
+  InventoryType,
+  InventoryEntry,
+  InventorySummary,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -263,6 +266,47 @@ class ApiClient {
 
   async deleteCustomisation(id: string) {
     return this.request<ApiResponse<{ id: string }>>(`/customisations/${id}`, { method: 'DELETE' })
+  }
+
+  // Inventory endpoints
+  async getInventoryTypes() {
+    return this.request<ApiResponse<InventoryType[]>>('/inventory/types')
+  }
+
+  async createInventoryType(data: { name: string; unit?: string }) {
+    return this.request<ApiResponse<InventoryType>>('/inventory/types', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteInventoryType(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/inventory/types/${id}`, { method: 'DELETE' })
+  }
+
+  async getInventoryEntries() {
+    return this.request<ApiResponse<InventoryEntry[]>>('/inventory/entries')
+  }
+
+  async createInventoryEntry(data: {
+    typeId: string
+    quantity: number
+    pricePerUnit: number
+    note?: string
+    date?: string
+  }) {
+    return this.request<ApiResponse<InventoryEntry>>('/inventory/entries', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteInventoryEntry(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/inventory/entries/${id}`, { method: 'DELETE' })
+  }
+
+  async getInventorySummary() {
+    return this.request<ApiResponse<InventorySummary>>('/inventory/summary')
   }
 
   // Category endpoints

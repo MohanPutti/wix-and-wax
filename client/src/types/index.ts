@@ -226,6 +226,31 @@ export interface PaginatedResponse<T> {
   }
 }
 
+// Inventory types
+export interface InventoryType {
+  id: string
+  name: string
+  unit?: string
+  createdAt: string
+}
+
+export interface InventoryEntry {
+  id: string
+  typeId: string
+  quantity: number
+  pricePerUnit: number
+  totalCost: number
+  note?: string
+  date: string
+  createdAt: string
+  type: Pick<InventoryType, 'id' | 'name' | 'unit'>
+}
+
+export interface InventorySummary {
+  totalInvested: number
+  currentValue: number
+}
+
 // Admin Dashboard types
 export interface DashboardStats {
   totalOrders: number

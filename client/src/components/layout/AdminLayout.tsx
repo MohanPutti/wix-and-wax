@@ -8,6 +8,7 @@ import {
   ArrowLeftIcon,
   SparklesIcon,
   TicketIcon,
+  ArchiveBoxIcon,
 } from '@heroicons/react/24/outline'
 import { useAppSelector } from '../../store/hooks'
 import { selectIsAdmin, selectIsLoading } from '../../store/slices/authSlice'
@@ -22,6 +23,7 @@ const navigation = [
   { name: 'Catalog', href: '/admin/catalog', icon: SparklesIcon },
   { name: 'Categories', href: '/admin/categories', icon: TagIcon },
   { name: 'Discounts', href: '/admin/discounts', icon: TicketIcon },
+  { name: 'Inventory', href: '/admin/inventory', icon: ArchiveBoxIcon },
   { name: 'Orders', href: '/admin/orders', icon: ClipboardDocumentListIcon },
 ]
 

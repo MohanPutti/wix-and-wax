@@ -427,6 +427,112 @@ app.delete('/api/customisations/:id', requireAuth, async (req, res) => {
   }
 })
 
+// ============================================================
+// INVENTORY MANAGEMENT
+// ============================================================
+
+app.get('/api/inventory/types', async (_req, res) => {
+  try {
+    const types = await prisma.inventoryType.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: types })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch inventory types' })
+  }
+})
+
+app.post('/api/inventory/types', requireAuth, async (req, res) => {
+  try {
+    const { name, unit } = req.body as { name: string; unit?: string }
+    const type = await prisma.inventoryType.create({
+      data: { id: uuidv4(), name: name.trim(), unit: unit?.trim() || null },
+    })
+    res.json({ success: true, data: type })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create inventory type' })
+  }
+})
+
+app.delete('/api/inventory/types/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.inventoryType.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch {
+    res.status(409).json({ success: false, error: 'Delete all entries for this type first' })
+  }
+})
+
+app.get('/api/inventory/entries', async (_req, res) => {
+  try {
+    const entries = await prisma.inventoryEntry.findMany({
+      orderBy: { date: 'desc' },
+      include: { type: { select: { id: true, name: true, unit: true } } },
+    })
+    res.json({ success: true, data: entries })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch inventory entries' })
+  }
+})
+
+app.post('/api/inventory/entries', requireAuth, async (req, res) => {
+  try {
+    const { typeId, quantity, pricePerUnit, note, date } =
+      req.body as { typeId: string; quantity: number; pricePerUnit: number; note?: string; date?: string }
+    const totalCost = quantity * pricePerUnit
+    const entry = await prisma.inventoryEntry.create({
+      data: {
+        id: uuidv4(),
+        typeId,
+        quantity,
+        pricePerUnit,
+        totalCost,
+        note: note?.trim() || null,
+        date: date ? new Date(date) : new Date(),
+      },
+      include: { type: { select: { id: true, name: true, unit: true } } },
+    })
+    res.json({ success: true, data: entry })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create inventory entry' })
+  }
+})
+
+app.delete('/api/inventory/entries/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.inventoryEntry.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to delete inventory entry' })
+  }
+})
+
+app.get('/api/inventory/summary', async (_req, res) => {
+  try {
+    const totals = await prisma.inventoryEntry.aggregate({ _sum: { totalCost: true } })
+    const totalInvested = Number(totals._sum.totalCost ?? 0)
+
+    const types = await prisma.inventoryType.findMany({ select: { id: true } })
+    let currentValue = 0
+    for (const t of types) {
+      const qtyAgg = await prisma.inventoryEntry.aggregate({
+        where: { typeId: t.id },
+        _sum: { quantity: true },
+      })
+      const currentQty = Number(qtyAgg._sum.quantity ?? 0)
+      if (currentQty <= 0) continue
+      const latestEntry = await prisma.inventoryEntry.findFirst({
+        where: { typeId: t.id },
+        orderBy: { date: 'desc' },
+        select: { pricePerUnit: true },
+      })
+      if (latestEntry) currentValue += currentQty * Number(latestEntry.pricePerUnit)
+    }
+
+    res.json({ success: true, data: { totalInvested, currentValue } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to compute inventory summary' })
+  }
+})
+
 // Sync product images directly via Prisma (bypasses core URL validation)
 app.put('/api/products/:id/images/sync', requireAuth, async (req, res) => {
   try {

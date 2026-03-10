@@ -447,6 +447,7 @@ class ApiClient {
     }>
     status?: string
     paymentStatus?: string
+    shippingCost?: number
     notes?: string
   }) {
     return this.request<ApiResponse<Order>>('/admin/orders', {

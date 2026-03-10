@@ -51,6 +51,7 @@ export default function AdminNewOrder() {
   // Status
   const [status, setStatus] = useState('confirmed')
   const [paymentStatus, setPaymentStatus] = useState('paid')
+  const [shippingCost, setShippingCost] = useState('')
   const [notes, setNotes] = useState('')
 
   // Product search
@@ -101,6 +102,8 @@ export default function AdminNewOrder() {
   }
 
   const subtotal = items.reduce((sum, i) => sum + (Number(i.price) || 0) * i.quantity, 0)
+  const shipping = Number(shippingCost) || 0
+  const total = subtotal + shipping
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -129,6 +132,7 @@ export default function AdminNewOrder() {
         })),
         status,
         paymentStatus,
+        shippingCost: shipping || undefined,
         notes: notes || undefined,
       })
       if (res.success) {
@@ -307,10 +311,26 @@ export default function AdminNewOrder() {
             ))}
           </div>
 
-          <div className="mt-4 flex justify-end border-t border-warm-100 pt-4">
-            <div className="text-right">
-              <p className="text-sm text-warm-500">Subtotal</p>
-              <p className="text-xl font-semibold text-warm-900">₹{subtotal.toFixed(2)}</p>
+          <div className="mt-4 border-t border-warm-100 pt-4">
+            <div className="flex items-end justify-between gap-4">
+              <div className="w-48">
+                <Input
+                  label="Shipping Cost (₹)"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={shippingCost}
+                  onChange={e => setShippingCost(e.target.value)}
+                />
+              </div>
+              <div className="text-right space-y-1">
+                <p className="text-sm text-warm-500">Subtotal <span className="text-warm-900 font-medium">₹{subtotal.toFixed(2)}</span></p>
+                {shipping > 0 && (
+                  <p className="text-sm text-warm-500">Shipping <span className="text-warm-900 font-medium">₹{shipping.toFixed(2)}</span></p>
+                )}
+                <p className="text-xl font-semibold text-warm-900">Total ₹{total.toFixed(2)}</p>
+              </div>
             </div>
           </div>
         </div>

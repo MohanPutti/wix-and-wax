@@ -442,6 +442,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
       items,
       status = 'confirmed',
       paymentStatus = 'paid',
+      shippingCost = 0,
       notes,
     } = req.body as {
       email?: string
@@ -466,6 +467,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
       }>
       status?: string
       paymentStatus?: string
+      shippingCost?: number
       notes?: string
     }
 
@@ -474,6 +476,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
     }
 
     const subtotal = items.reduce((sum, i) => sum + Number(i.price) * Number(i.quantity), 0)
+    const shipping = Number(shippingCost) || 0
     const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
     const order = await prisma.order.create({
@@ -486,8 +489,8 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
         subtotal,
         discount: 0,
         tax: 0,
-        shipping: 0,
-        total: subtotal,
+        shipping,
+        total: subtotal + shipping,
         currency: 'INR',
         shippingAddress: {
           firstName,

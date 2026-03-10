@@ -30,6 +30,7 @@ export default function ProductDetail() {
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 })
   const [fragranceSearch, setFragranceSearch] = useState('')
   const [colorSearch, setColorSearch] = useState('')
+  const [productNote, setProductNote] = useState('')
 
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
@@ -223,6 +224,7 @@ export default function ProductDetail() {
       })
       noteParts.push(`Customisations: ${customisationDetails.join(', ')}`)
     }
+    if (productNote.trim()) noteParts.push(`Note: ${productNote.trim()}`)
     const note = noteParts.join(' | ') || undefined
 
     setIsAddingToCart(true)
@@ -815,6 +817,20 @@ export default function ProductDetail() {
           {selectionError && (
             <p className="text-sm text-red-500 mb-4">{selectionError}</p>
           )}
+
+          {/* Product Note */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-warm-700 mb-1">
+              Note <span className="text-warm-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              rows={2}
+              placeholder="Any special requests or instructions..."
+              value={productNote}
+              onChange={(e) => setProductNote(e.target.value)}
+              className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
+            />
+          </div>
 
           {/* Quantity */}
           <div className="mb-8">

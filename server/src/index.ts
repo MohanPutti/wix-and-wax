@@ -444,6 +444,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
       paymentStatus = 'paid',
       shippingCost = 0,
       notes,
+      metadata: extraMetadata,
     } = req.body as {
       email?: string
       firstName: string
@@ -469,6 +470,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
       paymentStatus?: string
       shippingCost?: number
       notes?: string
+      metadata?: Record<string, unknown>
     }
 
     if (!items?.length) {
@@ -499,7 +501,7 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
           ...shippingAddress,
         } as object,
         notes,
-        metadata: { source: 'manual' } as object,
+        metadata: { source: 'manual', ...extraMetadata } as object,
         items: {
           create: items.map(item => ({
             variantId: item.variantId || null,

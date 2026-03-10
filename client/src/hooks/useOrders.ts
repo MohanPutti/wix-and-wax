@@ -103,7 +103,22 @@ export function useOrder(id: string) {
     }
   }
 
-  return { order, isLoading, error, updateStatus, updatePaymentStatus }
+  const updateMetadata = async (metadata: Record<string, unknown>) => {
+    if (!id) return
+    try {
+      const response = await api.updateOrderMetadata(id, {
+        ...(order?.metadata as Record<string, unknown> || {}),
+        ...metadata,
+      })
+      if (response.success) {
+        setOrder(response.data)
+      }
+    } catch (err) {
+      throw err
+    }
+  }
+
+  return { order, isLoading, error, updateStatus, updatePaymentStatus, updateMetadata }
 }
 
 export function useOrderByNumber(orderNumber: string, email?: string) {

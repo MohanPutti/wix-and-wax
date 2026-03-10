@@ -52,6 +52,7 @@ export default function AdminNewOrder() {
   const [status, setStatus] = useState('confirmed')
   const [paymentStatus, setPaymentStatus] = useState('paid')
   const [shippingCost, setShippingCost] = useState('')
+  const [amountPaid, setAmountPaid] = useState('')
   const [notes, setNotes] = useState('')
 
   // Product search
@@ -134,6 +135,7 @@ export default function AdminNewOrder() {
         paymentStatus,
         shippingCost: shipping || undefined,
         notes: notes || undefined,
+        metadata: paymentStatus === 'partially_paid' && amountPaid ? { amountPaid: Number(amountPaid) } : undefined,
       })
       if (res.success) {
         navigate(`/admin/orders/${res.data.id}`)
@@ -362,6 +364,31 @@ export default function AdminNewOrder() {
                 { value: 'failed', label: 'Failed' },
               ]}
             />
+            {paymentStatus === 'partially_paid' && (() => {
+              const paid = Number(amountPaid) || 0
+              const left = total - paid
+              return (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">Amount Paid (₹)</label>
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0.00"
+                      value={amountPaid}
+                      onChange={e => setAmountPaid(e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-warm-700 mb-1">Amount Left (₹)</label>
+                    <div className={`px-3 py-2 rounded-lg border border-warm-200 text-sm font-semibold bg-warm-50 ${left < 0 ? 'text-green-600' : left > 0 ? 'text-red-500' : 'text-warm-700'}`}>
+                      ₹{left.toFixed(2)}
+                    </div>
+                  </div>
+                </>
+              )
+            })()}
             <div className="col-span-2">
               <label className="block text-sm font-medium text-warm-700 mb-1">
                 Notes <span className="text-warm-400 font-normal">(optional)</span>

@@ -201,8 +201,10 @@ function DeleteOrderButton({ id, onDeleted }: { id: string; onDeleted: () => voi
 export function AdminOrderDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { order, isLoading, updateStatus, updatePaymentStatus } = useOrder(id || '')
+  const { order, isLoading, updateStatus, updatePaymentStatus, updateMetadata } = useOrder(id || '')
   const [isUpdating, setIsUpdating] = useState(false)
+  const [amountPaid, setAmountPaid] = useState('')
+  const [isSavingAmount, setIsSavingAmount] = useState(false)
 
   const handleStatusChange = async (newStatus: Order['status']) => {
     setIsUpdating(true)
@@ -223,6 +225,24 @@ export function AdminOrderDetail() {
       alert('Failed to update payment status')
     } finally {
       setIsUpdating(false)
+    }
+  }
+
+  // Sync amountPaid from metadata when order loads
+  useEffect(() => {
+    if (order?.metadata?.amountPaid !== undefined) {
+      setAmountPaid(String(order.metadata.amountPaid))
+    }
+  }, [order?.id])
+
+  const handleSaveAmountPaid = async () => {
+    setIsSavingAmount(true)
+    try {
+      await updateMetadata({ amountPaid: Number(amountPaid) || 0 })
+    } catch {
+      alert('Failed to save amount paid')
+    } finally {
+      setIsSavingAmount(false)
     }
   }
 
@@ -382,6 +402,43 @@ export function AdminOrderDetail() {
                   <span>₹{Number(order.total).toFixed(2)}</span>
                 </div>
               </div>
+
+              {order.paymentStatus === 'partially_paid' && (() => {
+                const total = Number(order.total) || 0
+                const paid = Number(amountPaid) || 0
+                const left = total - paid
+                return (
+                  <div className="border-t border-warm-200 pt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-warm-600 mb-1">Amount Paid (₹)</label>
+                      <div className="flex gap-2">
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          value={amountPaid}
+                          onChange={e => setAmountPaid(e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-sm border border-warm-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 text-warm-900"
+                          placeholder="0.00"
+                        />
+                        <button
+                          onClick={handleSaveAmountPaid}
+                          disabled={isSavingAmount}
+                          className="px-3 py-1.5 text-xs font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors disabled:opacity-50"
+                        >
+                          {isSavingAmount ? '...' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-warm-600">Amount Left</span>
+                      <span className={`font-semibold ${left < 0 ? 'text-green-600' : left > 0 ? 'text-red-500' : 'text-warm-900'}`}>
+                        ₹{left.toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           </div>
 

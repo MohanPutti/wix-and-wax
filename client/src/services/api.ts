@@ -449,6 +449,7 @@ class ApiClient {
     paymentStatus?: string
     shippingCost?: number
     notes?: string
+    metadata?: Record<string, unknown>
   }) {
     return this.request<ApiResponse<Order>>('/admin/orders', {
       method: 'POST',
@@ -517,6 +518,13 @@ class ApiClient {
     return this.request<ApiResponse<Order>>(`/orders/${id}`, {
       method: 'PUT',
       body: JSON.stringify({ paymentStatus }),
+    })
+  }
+
+  async updateOrderMetadata(id: string, metadata: Record<string, unknown>) {
+    return this.request<ApiResponse<Order>>(`/orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ metadata }),
     })
   }
 

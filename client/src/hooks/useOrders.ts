@@ -6,6 +6,7 @@ interface UseOrdersParams {
   page?: number
   limit?: number
   status?: string
+  paymentStatus?: string
   search?: string
   enabled?: boolean
 }

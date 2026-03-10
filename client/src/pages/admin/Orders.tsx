@@ -28,6 +28,7 @@ const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'd
 export function AdminOrderList() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
 
@@ -38,6 +39,7 @@ export function AdminOrderList() {
 
   const { orders, isLoading } = useOrders({
     status: statusFilter || undefined,
+    paymentStatus: paymentStatusFilter || undefined,
     search: debouncedSearch || undefined,
   })
 
@@ -83,6 +85,17 @@ export function AdminOrderList() {
               { value: 'shipped', label: 'Shipped' },
               { value: 'delivered', label: 'Delivered' },
               { value: 'cancelled', label: 'Cancelled' },
+            ]}
+          />
+          <Select
+            value={paymentStatusFilter}
+            onChange={(e) => setPaymentStatusFilter(e.target.value)}
+            options={[
+              { value: '', label: 'All Payments' },
+              { value: 'pending', label: 'Pending' },
+              { value: 'paid', label: 'Paid' },
+              { value: 'failed', label: 'Failed' },
+              { value: 'refunded', label: 'Refunded' },
             ]}
           />
         </div>

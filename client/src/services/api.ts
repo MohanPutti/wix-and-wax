@@ -483,7 +483,7 @@ class ApiClient {
     })
   }
 
-  async getOrders(params?: { page?: number; limit?: number; status?: string; search?: string }) {
+  async getOrders(params?: { page?: number; limit?: number; status?: string; paymentStatus?: string; search?: string }) {
     const searchParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {

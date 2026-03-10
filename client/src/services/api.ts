@@ -455,6 +455,12 @@ class ApiClient {
     })
   }
 
+  async deleteOrder(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/orders/${id}`, {
+      method: 'DELETE',
+    })
+  }
+
   async createOrder(data: {
     email: string
     shippingAddress: Address

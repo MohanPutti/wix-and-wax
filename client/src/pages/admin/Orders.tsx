@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { EyeIcon, PlusIcon } from '@heroicons/react/24/outline'
+import { EyeIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useOrders, useOrder } from '../../hooks/useOrders'
+import { api } from '../../services/api'
 import Badge from '../../components/ui/Badge'
 import Select from '../../components/ui/Select'
 import Input from '../../components/ui/Input'
@@ -130,13 +131,14 @@ export function AdminOrderList() {
                   {new Date(order.createdAt).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex justify-end">
+                  <div className="flex justify-end gap-1">
                     <Link
                       to={`/admin/orders/${order.id}`}
                       className="p-2 text-warm-500 hover:text-amber-600 transition-colors"
                     >
                       <EyeIcon className="h-5 w-5" />
                     </Link>
+                    <DeleteOrderButton id={order.id} onDeleted={() => window.location.reload()} />
                   </div>
                 </td>
               </tr>
@@ -154,8 +156,36 @@ export function AdminOrderList() {
   )
 }
 
+function DeleteOrderButton({ id, onDeleted }: { id: string; onDeleted: () => void }) {
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async () => {
+    if (!window.confirm('Delete this order? This cannot be undone.')) return
+    setIsDeleting(true)
+    try {
+      await api.deleteOrder(id)
+      onDeleted()
+    } catch {
+      alert('Failed to delete order')
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <button
+      onClick={handleDelete}
+      disabled={isDeleting}
+      className="p-2 text-warm-400 hover:text-red-600 transition-colors disabled:opacity-50"
+      title="Delete order"
+    >
+      <TrashIcon className="h-5 w-5" />
+    </button>
+  )
+}
+
 export function AdminOrderDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { order, isLoading, updateStatus, updatePaymentStatus } = useOrder(id || '')
   const [isUpdating, setIsUpdating] = useState(false)
 
@@ -214,13 +244,14 @@ export function AdminOrderDetail() {
             Order #{order.orderNumber}
           </h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-3">
           <Badge variant={statusColors[order.status]} size="md">
             {order.status}
           </Badge>
           <Badge variant={paymentStatusColors[order.paymentStatus]} size="md">
             {order.paymentStatus}
           </Badge>
+          <DeleteOrderButton id={order.id} onDeleted={() => navigate('/admin/orders')} />
         </div>
       </div>
 

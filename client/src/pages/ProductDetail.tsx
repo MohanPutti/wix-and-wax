@@ -356,7 +356,7 @@ export default function ProductDetail() {
         <div>
 
           {/* Name + Price — sticky below header */}
-          <div className="sticky top-[72px] z-20 bg-white/95 backdrop-blur-sm -mx-1 px-1 pb-4 pt-1">
+          <div className="sticky top-[72px] z-20 bg-cream-50 -mx-1 px-1 pb-4 pt-1">
             <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-3">
               {product.name}
             </h1>

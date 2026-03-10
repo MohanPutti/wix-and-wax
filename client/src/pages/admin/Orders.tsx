@@ -20,6 +20,7 @@ const statusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' 
 
 const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
   pending: 'warning',
+  partially_paid: 'info',
   paid: 'success',
   refunded: 'info',
   failed: 'danger',
@@ -93,6 +94,7 @@ export function AdminOrderList() {
             options={[
               { value: '', label: 'All Payments' },
               { value: 'pending', label: 'Pending' },
+              { value: 'partially_paid', label: 'Partially Paid' },
               { value: 'paid', label: 'Paid' },
               { value: 'failed', label: 'Failed' },
               { value: 'refunded', label: 'Refunded' },
@@ -339,6 +341,7 @@ export function AdminOrderDetail() {
                 onChange={(e) => handlePaymentStatusChange(e.target.value as Order['paymentStatus'])}
                 options={[
                   { value: 'pending', label: 'Pending' },
+                  { value: 'partially_paid', label: 'Partially Paid' },
                   { value: 'paid', label: 'Paid' },
                   { value: 'refunded', label: 'Refunded' },
                   { value: 'failed', label: 'Failed' },

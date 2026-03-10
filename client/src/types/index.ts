@@ -176,7 +176,7 @@ export interface Order {
   userId?: string
   email: string
   status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
-  paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed'
+  paymentStatus: 'pending' | 'paid' | 'partially_paid' | 'refunded' | 'failed'
   fulfillmentStatus: 'unfulfilled' | 'partial' | 'fulfilled'
   subtotal: number
   discount: number

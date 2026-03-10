@@ -337,6 +337,7 @@ export default function AdminNewOrder() {
               onChange={e => setPaymentStatus(e.target.value)}
               options={[
                 { value: 'pending', label: 'Pending' },
+                { value: 'partially_paid', label: 'Partially Paid' },
                 { value: 'paid', label: 'Paid' },
                 { value: 'failed', label: 'Failed' },
               ]}

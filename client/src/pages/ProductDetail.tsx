@@ -355,34 +355,35 @@ export default function ProductDetail() {
         {/* Product Info */}
         <div>
 
-          {/* Name */}
-          <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-4">
-            {product.name}
-          </h1>
-
-          {/* Pricing */}
-          <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-            <span className="text-3xl font-bold text-warm-900">
-              ₹{price.toFixed(0)}
-            </span>
+          {/* Name + Price — sticky below header */}
+          <div className="sticky top-[72px] z-20 bg-white/95 backdrop-blur-sm -mx-1 px-1 pb-4 pt-1">
+            <h1 className="font-serif text-3xl font-semibold text-warm-900 mb-3">
+              {product.name}
+            </h1>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <span className="text-3xl font-bold text-warm-900">
+                ₹{price.toFixed(0)}
+              </span>
+              {hasDiscount && (
+                <>
+                  <span className="text-xl text-warm-400 line-through">
+                    ₹{mrp!.toFixed(0)}
+                  </span>
+                  <span className="text-sm font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
+                    {discountPct}% off
+                  </span>
+                </>
+              )}
+            </div>
             {hasDiscount && (
-              <>
-                <span className="text-xl text-warm-400 line-through">
-                  ₹{mrp!.toFixed(0)}
-                </span>
-                <span className="text-sm font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-full">
-                  {discountPct}% off
-                </span>
-              </>
+              <p className="text-sm text-warm-500 mt-1">
+                MRP: <span className="line-through">₹{mrp!.toFixed(0)}</span>
+                {' '}· You save ₹{(mrp! - price).toFixed(0)}
+              </p>
             )}
           </div>
-          {hasDiscount && (
-            <p className="text-sm text-warm-500 mb-6">
-              MRP: <span className="line-through">₹{mrp!.toFixed(0)}</span>
-              {' '}· You save ₹{(mrp! - price).toFixed(0)}
-            </p>
-          )}
-          {!hasDiscount && <div className="mb-6" />}
+
+          <div className="mb-6" />
 
           {/* Description */}
           {product.description && (

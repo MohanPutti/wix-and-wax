@@ -107,38 +107,42 @@ export function AdminOrderList() {
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 shadow-soft mb-6">
         <div className="flex gap-4 flex-col sm:flex-row">
-          <div className="flex-1">
+          <div className="flex-[2] min-w-0">
             <Input
               placeholder="Search by order # or email..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
-          <Select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            options={[
-              { value: '', label: 'All Statuses' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'confirmed', label: 'Confirmed' },
-              { value: 'processing', label: 'Processing' },
-              { value: 'shipped', label: 'Shipped' },
-              { value: 'delivered', label: 'Delivered' },
-              { value: 'cancelled', label: 'Cancelled' },
-            ]}
-          />
-          <Select
-            value={paymentStatusFilter}
-            onChange={(e) => setPaymentStatusFilter(e.target.value)}
-            options={[
-              { value: '', label: 'All Payments' },
-              { value: 'pending', label: 'Pending' },
-              { value: 'partially_paid', label: 'Partially Paid' },
-              { value: 'paid', label: 'Paid' },
-              { value: 'failed', label: 'Failed' },
-              { value: 'refunded', label: 'Refunded' },
-            ]}
-          />
+          <div className="w-40 shrink-0">
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              options={[
+                { value: '', label: 'All Statuses' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'confirmed', label: 'Confirmed' },
+                { value: 'processing', label: 'Processing' },
+                { value: 'shipped', label: 'Shipped' },
+                { value: 'delivered', label: 'Delivered' },
+                { value: 'cancelled', label: 'Cancelled' },
+              ]}
+            />
+          </div>
+          <div className="w-44 shrink-0">
+            <Select
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              options={[
+                { value: '', label: 'All Payments' },
+                { value: 'pending', label: 'Pending' },
+                { value: 'partially_paid', label: 'Partially Paid' },
+                { value: 'paid', label: 'Paid' },
+                { value: 'failed', label: 'Failed' },
+                { value: 'refunded', label: 'Refunded' },
+              ]}
+            />
+          </div>
         </div>
       </div>
 
@@ -164,10 +168,8 @@ export function AdminOrderList() {
                 </td>
                 <td className="px-6 py-4">
                   <div>
-                    <p className="text-warm-900">{order.email}</p>
-                    <p className="text-sm text-warm-500">
-                      {order.shippingAddress.firstName} {order.shippingAddress.lastName}
-                    </p>
+                    <p className="text-warm-900">{order.shippingAddress.firstName} {order.shippingAddress.lastName}</p>
+                    <p className="text-sm text-warm-500">{order.email}</p>
                   </div>
                 </td>
                 <td className="px-6 py-4">
@@ -179,7 +181,22 @@ export function AdminOrderList() {
                   </Badge>
                 </td>
                 <td className="px-6 py-4 font-medium text-warm-900">
-                  ₹{Number(order.total).toFixed(2)}
+                  {(() => {
+                    const total = Number(order.total)
+                    const amountPaid = Number((order.metadata as Record<string, unknown>)?.amountPaid) || 0
+                    const pending = total - amountPaid
+                    const isPartial = order.paymentStatus === 'partially_paid' && pending > 0
+                    return (
+                      <div className={isPartial ? 'group relative cursor-default inline-block' : ''}>
+                        ₹{total.toFixed(2)}
+                        {isPartial && (
+                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-lg bg-warm-800 px-2.5 py-1.5 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                            Pending: ₹{pending.toFixed(2)}
+                          </span>
+                        )}
+                      </div>
+                    )
+                  })()}
                 </td>
                 <td className="px-6 py-4 text-warm-600">
                   {new Date(order.createdAt).toLocaleDateString()}

@@ -81,6 +81,21 @@ const verifyToken = async (token: string) => {
   }
 }
 
+// Auth middleware — defined early so it can be used before core modules
+const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const authHeader = req.headers.authorization
+  if (!authHeader?.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token provided' } })
+  }
+  const token = authHeader.slice(7)
+  const user = await verifyToken(token)
+  if (!user) {
+    return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } })
+  }
+  (req as express.Request & { user: typeof user }).user = user
+  next()
+}
+
 // Notification service — persists to DB, tracks sent/failed, supports retry via admin API
 const smtpAdapter = config.smtpUser && config.smtpPass
   ? createSMTPAdapter(gmailConfig(config.smtpUser, config.smtpPass, config.smtpFrom || config.smtpUser))
@@ -113,6 +128,33 @@ app.use('/api', setupCartModule({
   verifyToken,
   defaultCurrency: 'INR',
 }))
+
+// Must be registered before setupOrderModule so 'metrics' isn't treated as an order ID
+app.get('/api/orders/metrics', requireAuth, async (req, res) => {
+  try {
+    const { status, paymentStatus, search } = req.query as Record<string, string>
+    const where: Record<string, unknown> = { deletedAt: null }
+    if (status) where.status = status
+    if (paymentStatus) where.paymentStatus = paymentStatus
+    if (search) where.OR = [{ orderNumber: { contains: search } }, { email: { contains: search } }]
+
+    const orders = await prisma.order.findMany({ where, select: { total: true, paymentStatus: true, metadata: true } })
+
+    let totalPaid = 0, totalPending = 0
+    for (const o of orders) {
+      const total = Number(o.total) || 0
+      const amountPaid = Number((o.metadata as Record<string, unknown>)?.amountPaid) || 0
+      if (o.paymentStatus === 'paid') { totalPaid += total }
+      else if (o.paymentStatus === 'partially_paid') { totalPaid += amountPaid; totalPending += Math.max(0, total - amountPaid) }
+      else if (['pending', 'confirmed', 'processing', 'shipped', 'delivered'].includes(o.paymentStatus as string)) { totalPending += total }
+    }
+    const count = orders.length
+    const avgOrderValue = count > 0 ? orders.reduce((s, o) => s + (Number(o.total) || 0), 0) / count : 0
+    res.json({ success: true, data: { count, totalPaid, totalPending, avgOrderValue } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch metrics' })
+  }
+})
 
 app.use('/api', setupOrderModule({
   prisma,
@@ -224,50 +266,8 @@ app.get('/api/shipping/rates', async (req, res) => {
   res.json({ success: true, data: { rate, isEstimate: !isConfigured } })
 })
 
-// Address endpoints (requires authentication)
-const requireAuth = async (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const authHeader = req.headers.authorization
-  if (!authHeader?.startsWith('Bearer ')) {
-    return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'No token provided' } })
-  }
-  const token = authHeader.slice(7)
-  const user = await verifyToken(token)
-  if (!user) {
-    return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Invalid token' } })
-  }
-  (req as express.Request & { user: typeof user }).user = user
-  next()
-}
-
 // Cart service instance for custom routes
 const cartService = createCartService(prisma, { expirationDays: 30, defaultCurrency: 'INR' })
-
-// Order metrics (registered after requireAuth to avoid TDZ)
-app.get('/api/orders/metrics', requireAuth, async (req, res) => {
-  try {
-    const { status, paymentStatus, search } = req.query as Record<string, string>
-    const where: Record<string, unknown> = { deletedAt: null }
-    if (status) where.status = status
-    if (paymentStatus) where.paymentStatus = paymentStatus
-    if (search) where.OR = [{ orderNumber: { contains: search } }, { email: { contains: search } }]
-
-    const orders = await prisma.order.findMany({ where, select: { total: true, paymentStatus: true, metadata: true } })
-
-    let totalPaid = 0, totalPending = 0
-    for (const o of orders) {
-      const total = Number(o.total) || 0
-      const amountPaid = Number((o.metadata as Record<string, unknown>)?.amountPaid) || 0
-      if (o.paymentStatus === 'paid') { totalPaid += total }
-      else if (o.paymentStatus === 'partially_paid') { totalPaid += amountPaid; totalPending += Math.max(0, total - amountPaid) }
-      else if (['pending', 'confirmed', 'processing', 'shipped', 'delivered'].includes(o.paymentStatus as string)) { totalPending += total }
-    }
-    const count = orders.length
-    const avgOrderValue = count > 0 ? orders.reduce((s, o) => s + (Number(o.total) || 0), 0) / count : 0
-    res.json({ success: true, data: { count, totalPaid, totalPending, avgOrderValue } })
-  } catch {
-    res.status(500).json({ success: false, error: 'Failed to fetch metrics' })
-  }
-})
 
 // Merge guest cart into authenticated user's cart on login/register
 app.post('/api/cart/merge', requireAuth, async (req, res) => {

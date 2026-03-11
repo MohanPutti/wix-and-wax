@@ -532,14 +532,15 @@ app.put('/api/admin/orders/:id', requireAuth, async (req, res) => {
   try {
     const { id } = req.params
     const {
-      firstName, lastName, phone,
+      email, firstName, lastName, phone,
       address1, address2, city, state, postalCode, country,
-      productName, total, amountPaid,
+      items, shippingCost, amountPaid,
       notes, status, paymentStatus,
     } = req.body as {
-      firstName?: string; lastName?: string; phone?: string
+      email?: string; firstName?: string; lastName?: string; phone?: string
       address1?: string; address2?: string; city?: string; state?: string; postalCode?: string; country?: string
-      productName?: string; total?: number; amountPaid?: number
+      items?: { id?: string; productName: string; variantName?: string; sku?: string; quantity: number; price: number }[]
+      shippingCost?: number; amountPaid?: number
       notes?: string; status?: string; paymentStatus?: string
     }
 
@@ -553,23 +554,28 @@ app.put('/api/admin/orders/:id', requireAuth, async (req, res) => {
       ...(lastName !== undefined && { lastName }),
       ...(phone !== undefined && { phone }),
       ...(address1 !== undefined && { address1 }),
-      ...(address2 !== undefined && { address2 }),
+      ...(address2 !== undefined && { address2: address2 || '' }),
       ...(city !== undefined && { city }),
       ...(state !== undefined && { state }),
       ...(postalCode !== undefined && { postalCode }),
       ...(country !== undefined && { country }),
     }
 
-    const totalVal = total !== undefined ? Number(total) : Number(existing.total)
+    const subtotalVal = items ? items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0) : Number(existing.subtotal)
+    const shippingVal = shippingCost !== undefined ? Number(shippingCost) : Number(existing.shipping)
+    const totalVal = subtotalVal + shippingVal
+
     const currentMeta = (existing.metadata as Record<string, unknown>) || {}
     const newMeta = amountPaid !== undefined ? { ...currentMeta, amountPaid: Number(amountPaid) } : currentMeta
 
     const updated = await prisma.order.update({
       where: { id },
       data: {
+        ...(email !== undefined && { email }),
         shippingAddress: newAddr as object,
+        subtotal: subtotalVal,
+        shipping: shippingVal,
         total: totalVal,
-        subtotal: totalVal,
         ...(notes !== undefined && { notes }),
         ...(status !== undefined && { status }),
         ...(paymentStatus !== undefined && { paymentStatus }),
@@ -578,15 +584,50 @@ app.put('/api/admin/orders/:id', requireAuth, async (req, res) => {
       include: { items: true, payments: true, fulfillments: true, events: true },
     })
 
-    // Update product name on first item if provided
-    if (productName !== undefined && existing.items.length > 0) {
-      await prisma.orderItem.update({
-        where: { id: existing.items[0].id },
-        data: { productName, price: totalVal, total: totalVal },
-      })
+    // Update order items
+    if (items && items.length > 0) {
+      for (const item of items) {
+        const itemTotal = Number(item.price) * Number(item.quantity)
+        if (item.id) {
+          await prisma.orderItem.update({
+            where: { id: item.id },
+            data: {
+              productName: item.productName,
+              variantName: item.variantName || null,
+              sku: item.sku || null,
+              quantity: Number(item.quantity),
+              price: Number(item.price),
+              total: itemTotal,
+            },
+          })
+        } else {
+          await prisma.orderItem.create({
+            data: {
+              id: uuidv4(),
+              orderId: id,
+              productName: item.productName,
+              variantName: item.variantName || null,
+              sku: item.sku || null,
+              quantity: Number(item.quantity),
+              price: Number(item.price),
+              total: itemTotal,
+            },
+          })
+        }
+      }
+      // Remove items that were deleted (not in the new items list)
+      const newItemIds = items.filter(i => i.id).map(i => i.id!)
+      const toDelete = existing.items.filter(ei => !newItemIds.includes(ei.id))
+      for (const ei of toDelete) {
+        await prisma.orderItem.delete({ where: { id: ei.id } })
+      }
     }
 
-    res.json({ success: true, data: updated })
+    const final = await prisma.order.findUnique({
+      where: { id },
+      include: { items: true, payments: true, fulfillments: true, events: true },
+    })
+    res.json({ success: true, data: final })
   } catch (err) {
     console.error('Admin order edit error:', err)
     res.status(500).json({ success: false, error: 'Failed to update order' })

@@ -552,9 +552,10 @@ class ApiClient {
   }
 
   async adminUpdateOrder(id: string, data: {
-    firstName?: string; lastName?: string; phone?: string
+    email?: string; firstName?: string; lastName?: string; phone?: string
     address1?: string; address2?: string; city?: string; state?: string; postalCode?: string; country?: string
-    productName?: string; total?: number; amountPaid?: number
+    items?: { id?: string; productName: string; variantName?: string; sku?: string; quantity: number; price: number }[]
+    shippingCost?: number; amountPaid?: number
     notes?: string; status?: string; paymentStatus?: string
   }) {
     return this.request<ApiResponse<Order>>(`/admin/orders/${id}`, {

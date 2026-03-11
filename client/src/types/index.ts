@@ -227,10 +227,18 @@ export interface PaginatedResponse<T> {
 }
 
 // Inventory types
+export interface InventoryCategory {
+  id: string
+  name: string
+  createdAt: string
+}
+
 export interface InventoryType {
   id: string
   name: string
   unit?: string
+  categoryId?: string
+  category?: Pick<InventoryCategory, 'id' | 'name'>
   createdAt: string
 }
 

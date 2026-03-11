@@ -15,6 +15,7 @@ import type {
   Packaging,
   Customisation,
   Discount,
+  InventoryCategory,
   InventoryType,
   InventoryEntry,
   InventorySummary,
@@ -269,14 +270,36 @@ class ApiClient {
   }
 
   // Inventory endpoints
+  async getInventoryCategories() {
+    return this.request<ApiResponse<InventoryCategory[]>>('/inventory/categories')
+  }
+
+  async createInventoryCategory(data: { name: string }) {
+    return this.request<ApiResponse<InventoryCategory>>('/inventory/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteInventoryCategory(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/inventory/categories/${id}`, { method: 'DELETE' })
+  }
+
   async getInventoryTypes() {
     return this.request<ApiResponse<InventoryType[]>>('/inventory/types')
   }
 
-  async createInventoryType(data: { name: string; unit?: string }) {
+  async createInventoryType(data: { name: string; unit?: string; categoryId?: string }) {
     return this.request<ApiResponse<InventoryType>>('/inventory/types', {
       method: 'POST',
       body: JSON.stringify(data),
+    })
+  }
+
+  async updateInventoryTypeCategory(id: string, categoryId: string | null) {
+    return this.request<ApiResponse<InventoryType>>(`/inventory/types/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ categoryId }),
     })
   }
 

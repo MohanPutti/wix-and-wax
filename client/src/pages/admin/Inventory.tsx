@@ -4,7 +4,7 @@ import { api } from '../../services/api'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import Spinner from '../../components/ui/Spinner'
-import type { InventoryType, InventoryEntry } from '../../types'
+import type { InventoryCategory, InventoryType, InventoryEntry } from '../../types'
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
@@ -36,8 +36,12 @@ type ModalMode = 'add' | 'use'
 export default function AdminInventory() {
   const [types, setTypes] = useState<InventoryType[]>([])
   const [entries, setEntries] = useState<InventoryEntry[]>([])
+  const [categories, setCategories] = useState<InventoryCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Filter
+  const [filterCategoryId, setFilterCategoryId] = useState<string>('')
 
   // Purchase history toggle
   const [showHistory, setShowHistory] = useState(false)
@@ -46,7 +50,12 @@ export default function AdminInventory() {
   // Add type form
   const [typeName, setTypeName] = useState('')
   const [typeUnit, setTypeUnit] = useState('')
+  const [typeCategoryId, setTypeCategoryId] = useState('')
   const [isAddingType, setIsAddingType] = useState(false)
+
+  // Add category form
+  const [categoryName, setCategoryName] = useState('')
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
 
   // Expanded row for entry history
   const [expandedRow, setExpandedRow] = useState<string | null>(null)
@@ -63,12 +72,14 @@ export default function AdminInventory() {
   const load = async () => {
     setIsLoading(true)
     try {
-      const [typesRes, entriesRes] = await Promise.all([
+      const [typesRes, entriesRes, catsRes] = await Promise.all([
         api.getInventoryTypes(),
         api.getInventoryEntries(),
+        api.getInventoryCategories(),
       ])
       if (typesRes.success) setTypes(typesRes.data)
       if (entriesRes.success) setEntries(entriesRes.data)
+      if (catsRes.success) setCategories(catsRes.data)
     } catch {
       setError('Failed to load inventory')
     } finally {
@@ -79,7 +90,10 @@ export default function AdminInventory() {
   useEffect(() => { load() }, [])
 
   const stock = computeStock(types, entries)
-  const totalValue = stock.reduce((sum, r) => sum + r.value, 0)
+  const filteredStock = filterCategoryId
+    ? stock.filter(r => r.type.categoryId === filterCategoryId)
+    : stock
+  const totalValue = filteredStock.reduce((sum, r) => sum + r.value, 0)
   const totalInvested = entries.reduce((sum, e) => sum + Number(e.totalCost), 0)
 
   const handleAddType = async (e: React.FormEvent) => {
@@ -87,16 +101,59 @@ export default function AdminInventory() {
     if (!typeName.trim()) return
     setIsAddingType(true)
     try {
-      const res = await api.createInventoryType({ name: typeName.trim(), unit: typeUnit.trim() || undefined })
+      const res = await api.createInventoryType({
+        name: typeName.trim(),
+        unit: typeUnit.trim() || undefined,
+        categoryId: typeCategoryId || undefined,
+      })
       if (res.success) {
         setTypes(prev => [...prev, res.data].sort((a, b) => a.name.localeCompare(b.name)))
         setTypeName('')
         setTypeUnit('')
+        setTypeCategoryId('')
       }
     } catch {
       setError('Failed to add type')
     } finally {
       setIsAddingType(false)
+    }
+  }
+
+  const handleAddCategory = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!categoryName.trim()) return
+    setIsAddingCategory(true)
+    try {
+      const res = await api.createInventoryCategory({ name: categoryName.trim() })
+      if (res.success) {
+        setCategories(prev => [...prev, res.data].sort((a, b) => a.name.localeCompare(b.name)))
+        setCategoryName('')
+      }
+    } catch {
+      setError('Failed to add category')
+    } finally {
+      setIsAddingCategory(false)
+    }
+  }
+
+  const handleDeleteCategory = async (id: string) => {
+    try {
+      await api.deleteInventoryCategory(id)
+      setCategories(prev => prev.filter(c => c.id !== id))
+      setTypes(prev => prev.map(t => t.categoryId === id ? { ...t, categoryId: undefined, category: undefined } : t))
+    } catch {
+      setError('Failed to delete category')
+    }
+  }
+
+  const handleTypeCategory = async (typeId: string, categoryId: string | null) => {
+    try {
+      const res = await api.updateInventoryTypeCategory(typeId, categoryId)
+      if (res.success) {
+        setTypes(prev => prev.map(t => t.id === typeId ? res.data : t))
+      }
+    } catch {
+      setError('Failed to update category')
     }
   }
 
@@ -184,6 +241,27 @@ export default function AdminInventory() {
         </div>
       )}
 
+      {/* Category Filter */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            onClick={() => setFilterCategoryId('')}
+            className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${!filterCategoryId ? 'bg-amber-600 text-white border-amber-600' : 'border-warm-200 text-warm-600 hover:border-amber-400'}`}
+          >
+            All
+          </button>
+          {categories.map(c => (
+            <button
+              key={c.id}
+              onClick={() => setFilterCategoryId(c.id === filterCategoryId ? '' : c.id)}
+              className={`px-3 py-1.5 rounded-full text-sm border transition-colors ${filterCategoryId === c.id ? 'bg-amber-600 text-white border-amber-600' : 'border-warm-200 text-warm-600 hover:border-amber-400'}`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid sm:grid-cols-2 gap-6 mb-8">
         <div className="bg-white rounded-2xl p-6 shadow-soft">
@@ -202,9 +280,9 @@ export default function AdminInventory() {
         <div className="px-6 py-4 border-b border-warm-100">
           <h2 className="font-semibold text-warm-900">Current Inventory</h2>
         </div>
-        {stock.length === 0 ? (
+        {filteredStock.length === 0 ? (
           <div className="py-16 text-center text-warm-400">
-            No inventory types yet. Add types below to get started.
+            {stock.length === 0 ? 'No inventory types yet. Add types below to get started.' : 'No items in this category.'}
           </div>
         ) : (
           <table className="w-full text-sm">
@@ -218,12 +296,16 @@ export default function AdminInventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-warm-100">
-              {stock.map(row => (
+              {filteredStock.map(row => (
                 <>
                   <tr key={row.type.id} className="hover:bg-warm-50 transition-colors">
                     <td className="px-6 py-4 font-medium text-warm-900">
-                      {row.type.name}
-                      {row.type.unit && <span className="ml-1 text-xs text-warm-400 font-normal">({row.type.unit})</span>}
+                      <div className="flex items-center gap-2">
+                        <span>{row.type.name}{row.type.unit && <span className="ml-1 text-xs text-warm-400 font-normal">({row.type.unit})</span>}</span>
+                        {row.type.category && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{row.type.category.name}</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right">
                       <span className={`font-semibold ${row.quantity <= 0 ? 'text-red-500' : 'text-warm-900'}`}>
@@ -375,37 +457,91 @@ export default function AdminInventory() {
           {showManageTypes ? <ChevronUpIcon className="h-5 w-5 text-warm-400" /> : <ChevronDownIcon className="h-5 w-5 text-warm-400" />}
         </button>
         {showManageTypes && (
-          <div className="border-t border-warm-100 p-6">
-            <form onSubmit={handleAddType} className="flex gap-3 mb-4">
-              <Input
-                placeholder="Type name (e.g. Wax, Wicks, Jars)"
-                value={typeName}
-                onChange={e => setTypeName(e.target.value)}
-              />
-              <Input
-                placeholder="Unit (optional)"
-                value={typeUnit}
-                onChange={e => setTypeUnit(e.target.value)}
-                className="w-40"
-              />
-              <Button type="submit" variant="outline" isLoading={isAddingType}>
-                Add
-              </Button>
-            </form>
-            {types.length === 0 ? (
-              <p className="text-sm text-warm-400">No types yet. Add one above.</p>
-            ) : (
-              <div className="divide-y divide-warm-100 border border-warm-100 rounded-xl overflow-hidden">
-                {types.map(t => (
-                  <div key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-warm-50 transition-colors">
-                    <span className="text-sm text-warm-800">{t.name}{t.unit ? <span className="ml-1 text-xs text-warm-400">({t.unit})</span> : ''}</span>
-                    <button onClick={() => handleDeleteType(t.id)} className="p-1.5 text-warm-400 hover:text-red-600 transition-colors">
-                      <TrashIcon className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+          <div className="border-t border-warm-100 p-6 space-y-6">
+            {/* Categories */}
+            <div>
+              <h3 className="text-sm font-semibold text-warm-700 mb-3">Categories</h3>
+              <form onSubmit={handleAddCategory} className="flex gap-3 mb-3">
+                <Input
+                  placeholder="Category name (e.g. Packaging, Raw Material)"
+                  value={categoryName}
+                  onChange={e => setCategoryName(e.target.value)}
+                />
+                <Button type="submit" variant="outline" isLoading={isAddingCategory}>Add</Button>
+              </form>
+              {categories.length === 0 ? (
+                <p className="text-sm text-warm-400">No categories yet.</p>
+              ) : (
+                <div className="divide-y divide-warm-100 border border-warm-100 rounded-xl overflow-hidden">
+                  {categories.map(c => (
+                    <div key={c.id} className="flex items-center justify-between px-4 py-2.5 hover:bg-warm-50 transition-colors">
+                      <span className="text-sm text-warm-800">{c.name}</span>
+                      <button onClick={() => handleDeleteCategory(c.id)} className="p-1.5 text-warm-400 hover:text-red-600 transition-colors">
+                        <TrashIcon className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Item Types */}
+            <div>
+              <h3 className="text-sm font-semibold text-warm-700 mb-3">Item Types</h3>
+              <form onSubmit={handleAddType} className="flex gap-3 mb-3 flex-wrap">
+                <Input
+                  placeholder="Type name (e.g. Wax, Wicks, Jars)"
+                  value={typeName}
+                  onChange={e => setTypeName(e.target.value)}
+                />
+                <Input
+                  placeholder="Unit (optional)"
+                  value={typeUnit}
+                  onChange={e => setTypeUnit(e.target.value)}
+                  className="w-36"
+                />
+                {categories.length > 0 && (
+                  <select
+                    value={typeCategoryId}
+                    onChange={e => setTypeCategoryId(e.target.value)}
+                    className="border border-warm-200 rounded-xl px-3 py-2 text-sm text-warm-800 bg-white focus:outline-none focus:ring-2 focus:ring-amber-300 w-44"
+                  >
+                    <option value="">No category</option>
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                )}
+                <Button type="submit" variant="outline" isLoading={isAddingType}>Add</Button>
+              </form>
+              {types.length === 0 ? (
+                <p className="text-sm text-warm-400">No types yet. Add one above.</p>
+              ) : (
+                <div className="divide-y divide-warm-100 border border-warm-100 rounded-xl overflow-hidden">
+                  {types.map(t => (
+                    <div key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-warm-50 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-warm-800">{t.name}{t.unit ? <span className="ml-1 text-xs text-warm-400">({t.unit})</span> : ''}</span>
+                        {t.category && <span className="text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">{t.category.name}</span>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {categories.length > 0 && (
+                          <select
+                            value={t.categoryId || ''}
+                            onChange={e => handleTypeCategory(t.id, e.target.value || null)}
+                            className="text-xs border border-warm-200 rounded-lg px-2 py-1 text-warm-600 bg-white focus:outline-none focus:ring-1 focus:ring-amber-300"
+                          >
+                            <option value="">No category</option>
+                            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
+                        )}
+                        <button onClick={() => handleDeleteType(t.id)} className="p-1.5 text-warm-400 hover:text-red-600 transition-colors">
+                          <TrashIcon className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

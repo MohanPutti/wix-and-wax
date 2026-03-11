@@ -597,9 +597,42 @@ app.put('/api/admin/orders/:id', requireAuth, async (req, res) => {
 // INVENTORY MANAGEMENT
 // ============================================================
 
+app.get('/api/inventory/categories', async (_req, res) => {
+  try {
+    const categories = await prisma.inventoryCategory.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: categories })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch inventory categories' })
+  }
+})
+
+app.post('/api/inventory/categories', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body as { name: string }
+    const category = await prisma.inventoryCategory.create({
+      data: { id: uuidv4(), name: name.trim() },
+    })
+    res.json({ success: true, data: category })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create inventory category' })
+  }
+})
+
+app.delete('/api/inventory/categories/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.inventoryCategory.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to delete inventory category' })
+  }
+})
+
 app.get('/api/inventory/types', async (_req, res) => {
   try {
-    const types = await prisma.inventoryType.findMany({ orderBy: { name: 'asc' } })
+    const types = await prisma.inventoryType.findMany({
+      orderBy: { name: 'asc' },
+      include: { category: { select: { id: true, name: true } } },
+    })
     res.json({ success: true, data: types })
   } catch {
     res.status(500).json({ success: false, error: 'Failed to fetch inventory types' })
@@ -608,13 +641,28 @@ app.get('/api/inventory/types', async (_req, res) => {
 
 app.post('/api/inventory/types', requireAuth, async (req, res) => {
   try {
-    const { name, unit } = req.body as { name: string; unit?: string }
+    const { name, unit, categoryId } = req.body as { name: string; unit?: string; categoryId?: string }
     const type = await prisma.inventoryType.create({
-      data: { id: uuidv4(), name: name.trim(), unit: unit?.trim() || null },
+      data: { id: uuidv4(), name: name.trim(), unit: unit?.trim() || null, categoryId: categoryId || null },
+      include: { category: { select: { id: true, name: true } } },
     })
     res.json({ success: true, data: type })
   } catch {
     res.status(500).json({ success: false, error: 'Failed to create inventory type' })
+  }
+})
+
+app.patch('/api/inventory/types/:id', requireAuth, async (req, res) => {
+  try {
+    const { categoryId } = req.body as { categoryId: string | null }
+    const type = await prisma.inventoryType.update({
+      where: { id: req.params.id },
+      data: { categoryId: categoryId || null },
+      include: { category: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: type })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to update inventory type' })
   }
 })
 

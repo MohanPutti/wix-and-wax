@@ -525,6 +525,75 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
 })
 
 // ============================================================
+// ADMIN ORDER EDIT
+// ============================================================
+
+app.put('/api/admin/orders/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params
+    const {
+      firstName, lastName, phone,
+      address1, address2, city, state, postalCode, country,
+      productName, total, amountPaid,
+      notes, status, paymentStatus,
+    } = req.body as {
+      firstName?: string; lastName?: string; phone?: string
+      address1?: string; address2?: string; city?: string; state?: string; postalCode?: string; country?: string
+      productName?: string; total?: number; amountPaid?: number
+      notes?: string; status?: string; paymentStatus?: string
+    }
+
+    const existing = await prisma.order.findUnique({ where: { id }, include: { items: true } })
+    if (!existing) return res.status(404).json({ success: false, error: 'Order not found' })
+
+    const currentAddr = (existing.shippingAddress as Record<string, string>) || {}
+    const newAddr = {
+      ...currentAddr,
+      ...(firstName !== undefined && { firstName }),
+      ...(lastName !== undefined && { lastName }),
+      ...(phone !== undefined && { phone }),
+      ...(address1 !== undefined && { address1 }),
+      ...(address2 !== undefined && { address2 }),
+      ...(city !== undefined && { city }),
+      ...(state !== undefined && { state }),
+      ...(postalCode !== undefined && { postalCode }),
+      ...(country !== undefined && { country }),
+    }
+
+    const totalVal = total !== undefined ? Number(total) : Number(existing.total)
+    const currentMeta = (existing.metadata as Record<string, unknown>) || {}
+    const newMeta = amountPaid !== undefined ? { ...currentMeta, amountPaid: Number(amountPaid) } : currentMeta
+
+    const updated = await prisma.order.update({
+      where: { id },
+      data: {
+        shippingAddress: newAddr as object,
+        total: totalVal,
+        subtotal: totalVal,
+        ...(notes !== undefined && { notes }),
+        ...(status !== undefined && { status }),
+        ...(paymentStatus !== undefined && { paymentStatus }),
+        metadata: newMeta as object,
+      },
+      include: { items: true, payments: true, fulfillments: true, events: true },
+    })
+
+    // Update product name on first item if provided
+    if (productName !== undefined && existing.items.length > 0) {
+      await prisma.orderItem.update({
+        where: { id: existing.items[0].id },
+        data: { productName, price: totalVal, total: totalVal },
+      })
+    }
+
+    res.json({ success: true, data: updated })
+  } catch (err) {
+    console.error('Admin order edit error:', err)
+    res.status(500).json({ success: false, error: 'Failed to update order' })
+  }
+})
+
+// ============================================================
 // INVENTORY MANAGEMENT
 // ============================================================
 

@@ -528,6 +528,18 @@ class ApiClient {
     })
   }
 
+  async adminUpdateOrder(id: string, data: {
+    firstName?: string; lastName?: string; phone?: string
+    address1?: string; address2?: string; city?: string; state?: string; postalCode?: string; country?: string
+    productName?: string; total?: number; amountPaid?: number
+    notes?: string; status?: string; paymentStatus?: string
+  }) {
+    return this.request<ApiResponse<Order>>(`/admin/orders/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
   // Upload endpoint
   async uploadImage(file: File) {
     const formData = new FormData()

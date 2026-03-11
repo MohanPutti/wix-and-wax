@@ -3,7 +3,7 @@
 > Run through this checklist every time you push changes that include
 > Prisma schema changes or new backend/frontend code.
 >
-> **EC2:** `13.233.190.247`  SSH key: `~/.ssh/portfolio-parser-key.pem`
+> **EC2:** `13.205.92.146`  SSH key: `~/.ssh/portfolio-parser-key.pem`
 > **RDS:** `wix-and-wax-db.cpaao8eykg3n.ap-south-1.rds.amazonaws.com`  DB: `wix_and_wax`
 
 ---
@@ -55,7 +55,7 @@ run the migration script against production RDS.
 
 ```bash
 # On EC2:
-ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247
+ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146
 
 # Inside EC2, check a sample variant:
 docker exec $(docker ps -q) node -e "
@@ -130,11 +130,11 @@ docker build -t wix-and-wax-backend .
 
 # 2. Transfer image to EC2 and reload container (single command)
 docker save wix-and-wax-backend | gzip | \
-  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247 \
+  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146 \
   "gunzip | docker load && cd /app/wix-and-wax && sudo docker compose up -d --force-recreate"
 
 # 3. Verify backend is healthy
-ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247 \
+ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146 \
   "curl -s http://localhost:3001/api/health"
 ```
 
@@ -150,7 +150,7 @@ npm run build     # runs: vite build (TS errors skipped by vite, output to dist/
 # 2. Upload to EC2
 rsync -avz --delete -e "ssh -i ~/.ssh/portfolio-parser-key.pem" \
   dist/ \
-  ubuntu@13.233.190.247:/var/www/wix-and-wax/client/dist/
+  ubuntu@13.205.92.146:/var/www/wix-and-wax/client/dist/
 
 cd ..
 ```
@@ -163,7 +163,7 @@ cd ..
 
 ```bash
 # Check API
-curl https://wicksandwax.in/api/health         # or http://13.233.190.247/api/health
+curl https://wicksandwax.in/api/health         # or http://13.205.92.146/api/health
 
 # Check new catalog endpoints
 curl https://wicksandwax.in/api/bases
@@ -187,11 +187,11 @@ When you only changed TypeScript/React code (no Prisma changes):
 # Backend + Frontend in one go
 docker build -t wix-and-wax-backend . && \
 docker save wix-and-wax-backend | gzip | \
-  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247 \
+  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146 \
   "gunzip | docker load && cd /app/wix-and-wax && sudo docker compose up -d --force-recreate" && \
 cd client && npm run build && \
 rsync -avz --delete -e "ssh -i ~/.ssh/portfolio-parser-key.pem" \
-  dist/ ubuntu@13.233.190.247:/var/www/wix-and-wax/client/dist/
+  dist/ ubuntu@13.205.92.146:/var/www/wix-and-wax/client/dist/
 ```
 
 ---
@@ -200,7 +200,7 @@ rsync -avz --delete -e "ssh -i ~/.ssh/portfolio-parser-key.pem" \
 
 ```bash
 # SSH in
-ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247
+ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146
 
 # View live backend logs
 sudo docker compose -f /app/wix-and-wax/docker-compose.yml logs -f

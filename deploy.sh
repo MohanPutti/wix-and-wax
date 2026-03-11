@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-EC2="ubuntu@13.233.190.247"
+EC2="ubuntu@13.205.92.146"
 SSH_KEY="~/.ssh/portfolio-parser-key.pem"
 SSH="ssh -i $SSH_KEY"
 

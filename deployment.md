@@ -5,7 +5,7 @@
 | Resource | Value |
 |---|---|
 | EC2 Instance | `i-079cdb7ec74b87f23` |
-| EC2 Public IP | `13.233.190.247` |
+| EC2 Public IP | `13.205.92.146` |
 | EC2 Type | t3.micro, Ubuntu 22.04 |
 | RDS Identifier | `wix-and-wax-db` |
 | RDS Endpoint | `wix-and-wax-db.cpaao8eykg3n.ap-south-1.rds.amazonaws.com` |
@@ -66,7 +66,7 @@ docker build -t wix-and-wax-backend .
 
 # Transfer to EC2 (no registry needed)
 docker save wix-and-wax-backend | gzip | \
-  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247 \
+  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146 \
   "gunzip | docker load"
 ```
 
@@ -84,7 +84,7 @@ curl http://localhost:3001/api/health
 # Copy config
 scp -i ~/.ssh/portfolio-parser-key.pem \
   nginx/wix-and-wax.conf \
-  ubuntu@13.233.190.247:/etc/nginx/sites-available/wix-and-wax
+  ubuntu@13.205.92.146:/etc/nginx/sites-available/wix-and-wax
 
 # On EC2
 sudo ln -sf /etc/nginx/sites-available/wix-and-wax /etc/nginx/sites-enabled/
@@ -94,7 +94,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ### 9. SSL Certificate (needs domain pointed to EC2 IP first)
 ```bash
-# Point DNS A record: wicksandwax.in → 13.233.190.247
+# Point DNS A record: wicksandwax.in → 13.205.92.146
 # Then on EC2:
 sudo certbot --nginx -d wicksandwax.in -d www.wicksandwax.in
 ```
@@ -125,7 +125,7 @@ File: `/app/wix-and-wax/server/.env.production`
 
 ```bash
 # SSH into EC2
-ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247
+ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146
 
 # View backend logs
 ssh ... "cd /app/wix-and-wax && sudo docker compose logs -f"
@@ -136,7 +136,7 @@ ssh ... "cd /app/wix-and-wax && sudo docker compose restart"
 # Rebuild and redeploy (after code changes)
 docker build -t wix-and-wax-backend . && \
 docker save wix-and-wax-backend | gzip | \
-  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.233.190.247 \
+  ssh -i ~/.ssh/portfolio-parser-key.pem ubuntu@13.205.92.146 \
   "gunzip | docker load && cd /app/wix-and-wax && sudo docker compose up -d"
 ```
 

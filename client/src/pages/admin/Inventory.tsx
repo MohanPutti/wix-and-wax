@@ -41,6 +41,7 @@ export default function AdminInventory() {
 
   // Purchase history toggle
   const [showHistory, setShowHistory] = useState(false)
+  const [showManageTypes, setShowManageTypes] = useState(false)
 
   // Add type form
   const [typeName, setTypeName] = useState('')
@@ -365,36 +366,46 @@ export default function AdminInventory() {
       </div>
 
       {/* Manage Types */}
-      <div className="bg-white rounded-2xl shadow-soft p-6">
-        <h2 className="font-semibold text-warm-900 mb-4">Manage Item Types</h2>
-        <form onSubmit={handleAddType} className="flex gap-3 mb-4">
-          <Input
-            placeholder="Type name (e.g. Wax, Wicks, Jars)"
-            value={typeName}
-            onChange={e => setTypeName(e.target.value)}
-          />
-          <Input
-            placeholder="Unit (optional)"
-            value={typeUnit}
-            onChange={e => setTypeUnit(e.target.value)}
-            className="w-40"
-          />
-<Button type="submit" variant="outline" isLoading={isAddingType}>
-            Add
-          </Button>
-        </form>
-        {types.length === 0 ? (
-          <p className="text-sm text-warm-400">No types yet. Add one above.</p>
-        ) : (
-          <div className="divide-y divide-warm-100 border border-warm-100 rounded-xl overflow-hidden">
-            {types.map(t => (
-              <div key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-warm-50 transition-colors">
-                <span className="text-sm text-warm-800">{t.name}{t.unit ? <span className="ml-1 text-xs text-warm-400">({t.unit})</span> : ''}</span>
-                <button onClick={() => handleDeleteType(t.id)} className="p-1.5 text-warm-400 hover:text-red-600 transition-colors">
-                  <TrashIcon className="h-4 w-4" />
-                </button>
+      <div className="bg-white rounded-2xl shadow-soft overflow-hidden mb-6">
+        <button
+          className="w-full flex items-center justify-between px-6 py-4 hover:bg-warm-50 transition-colors"
+          onClick={() => setShowManageTypes(v => !v)}
+        >
+          <span className="font-semibold text-warm-900">Manage Item Types</span>
+          {showManageTypes ? <ChevronUpIcon className="h-5 w-5 text-warm-400" /> : <ChevronDownIcon className="h-5 w-5 text-warm-400" />}
+        </button>
+        {showManageTypes && (
+          <div className="border-t border-warm-100 p-6">
+            <form onSubmit={handleAddType} className="flex gap-3 mb-4">
+              <Input
+                placeholder="Type name (e.g. Wax, Wicks, Jars)"
+                value={typeName}
+                onChange={e => setTypeName(e.target.value)}
+              />
+              <Input
+                placeholder="Unit (optional)"
+                value={typeUnit}
+                onChange={e => setTypeUnit(e.target.value)}
+                className="w-40"
+              />
+              <Button type="submit" variant="outline" isLoading={isAddingType}>
+                Add
+              </Button>
+            </form>
+            {types.length === 0 ? (
+              <p className="text-sm text-warm-400">No types yet. Add one above.</p>
+            ) : (
+              <div className="divide-y divide-warm-100 border border-warm-100 rounded-xl overflow-hidden">
+                {types.map(t => (
+                  <div key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-warm-50 transition-colors">
+                    <span className="text-sm text-warm-800">{t.name}{t.unit ? <span className="ml-1 text-xs text-warm-400">({t.unit})</span> : ''}</span>
+                    <button onClick={() => handleDeleteType(t.id)} className="p-1.5 text-warm-400 hover:text-red-600 transition-colors">
+                      <TrashIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         )}
       </div>

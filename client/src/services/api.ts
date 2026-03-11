@@ -520,6 +520,19 @@ class ApiClient {
     })
   }
 
+  async getOrderMetrics(params?: { status?: string; paymentStatus?: string; search?: string }) {
+    const searchParams = new URLSearchParams()
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined) searchParams.append(key, String(value))
+      })
+    }
+    const query = searchParams.toString()
+    return this.request<ApiResponse<{ count: number; totalPaid: number; totalPending: number; avgOrderValue: number }>>(
+      `/orders/metrics${query ? `?${query}` : ''}`
+    )
+  }
+
   async getOrders(params?: { page?: number; limit?: number; status?: string; paymentStatus?: string; search?: string }) {
     const searchParams = new URLSearchParams()
     if (params) {

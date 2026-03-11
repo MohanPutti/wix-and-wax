@@ -26,6 +26,9 @@ const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'd
   failed: 'danger',
 }
 
+const fmtCurrency = (n: number) =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
+
 export function AdminOrderList() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
@@ -33,6 +36,7 @@ export function AdminOrderList() {
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
+  const [metrics, setMetrics] = useState<{ count: number; totalPaid: number; totalPending: number; avgOrderValue: number } | null>(null)
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebouncedSearch(searchInput); setPage(1) }, 300)
@@ -40,6 +44,14 @@ export function AdminOrderList() {
   }, [searchInput])
 
   useEffect(() => { setPage(1) }, [statusFilter, paymentStatusFilter])
+
+  useEffect(() => {
+    api.getOrderMetrics({
+      status: statusFilter || undefined,
+      paymentStatus: paymentStatusFilter || undefined,
+      search: debouncedSearch || undefined,
+    }).then(res => { if (res.success) setMetrics(res.data) })
+  }, [statusFilter, paymentStatusFilter, debouncedSearch])
 
   const { orders, isLoading, pagination } = useOrders({
     status: statusFilter || undefined,
@@ -49,7 +61,7 @@ export function AdminOrderList() {
     limit: 50,
   })
 
-  if (isLoading) {
+  if (isLoading && !metrics) {
     return (
       <div className="flex justify-center items-center min-h-[60vh]">
         <Spinner size="lg" />
@@ -59,7 +71,7 @@ export function AdminOrderList() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <h1 className="font-serif text-3xl font-semibold text-warm-900">Orders</h1>
         <button
           onClick={() => navigate('/admin/orders/new')}
@@ -69,6 +81,28 @@ export function AdminOrderList() {
           New Order
         </button>
       </div>
+
+      {/* Metrics */}
+      {metrics && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-xl p-4 shadow-soft">
+            <p className="text-xs text-warm-500 mb-1">Total Orders</p>
+            <p className="text-2xl font-semibold text-warm-900">{metrics.count.toLocaleString('en-IN')}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-soft">
+            <p className="text-xs text-warm-500 mb-1">Amount Paid</p>
+            <p className="text-2xl font-semibold text-green-600">{fmtCurrency(metrics.totalPaid)}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-soft">
+            <p className="text-xs text-warm-500 mb-1">Amount Pending</p>
+            <p className="text-2xl font-semibold text-red-500">{fmtCurrency(metrics.totalPending)}</p>
+          </div>
+          <div className="bg-white rounded-xl p-4 shadow-soft">
+            <p className="text-xs text-warm-500 mb-1">Avg Order Value</p>
+            <p className="text-2xl font-semibold text-amber-600">{fmtCurrency(metrics.avgOrderValue)}</p>
+          </div>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 shadow-soft mb-6">

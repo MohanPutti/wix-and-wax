@@ -29,6 +29,7 @@ import AdminCatalog from './pages/admin/Catalog'
 import AdminDiscounts from './pages/admin/Discounts'
 import AdminInventory from './pages/admin/Inventory'
 import AdminNewOrder from './pages/admin/NewOrder'
+import PublicOrderForm from './pages/PublicOrderForm'
 
 // Disable browser scroll restoration before any rendering
 if ('scrollRestoration' in window.history) {
@@ -164,6 +165,7 @@ function AppContent() {
           </Layout>
         }
       />
+      <Route path="/order" element={<PublicOrderForm />} />
       <Route
         path="/order-confirmation/:orderNumber"
         element={

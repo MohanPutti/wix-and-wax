@@ -525,6 +525,98 @@ app.post('/api/admin/orders', requireAuth, async (req, res) => {
 })
 
 // ============================================================
+// PUBLIC ORDER FORM
+// ============================================================
+
+app.post('/api/public/orders', async (req, res) => {
+  try {
+    const {
+      firstName, lastName, phone, email,
+      address1, address2, city, state, postalCode, country,
+      items, notes, amountPaid,
+    } = req.body as {
+      firstName: string
+      lastName: string
+      phone: string
+      email?: string
+      address1: string
+      address2?: string
+      city: string
+      state?: string
+      postalCode: string
+      country?: string
+      items: Array<{ productName: string; variantName?: string; quantity: number; note?: string }>
+      notes?: string
+      amountPaid?: number
+    }
+
+    if (!firstName?.trim() || !phone?.trim()) {
+      return res.status(400).json({ success: false, error: 'Name and phone are required' })
+    }
+    if (!address1?.trim() || !city?.trim() || !postalCode?.trim()) {
+      return res.status(400).json({ success: false, error: 'Address, city and pincode are required' })
+    }
+    if (!items?.length || !items.some(i => i.productName?.trim())) {
+      return res.status(400).json({ success: false, error: 'At least one item is required' })
+    }
+
+    const hasAmountPaid = amountPaid !== undefined && amountPaid !== null && Number(amountPaid) > 0
+    const paymentStatus = hasAmountPaid ? 'partially_paid' : 'pending'
+    const orderNumber = `ORD-${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+
+    const order = await prisma.order.create({
+      data: {
+        orderNumber,
+        email: email || `${phone}@wicksandwax.in`,
+        status: 'pending',
+        paymentStatus,
+        fulfillmentStatus: 'unfulfilled',
+        subtotal: 0,
+        discount: 0,
+        tax: 0,
+        shipping: 0,
+        total: 0,
+        currency: 'INR',
+        shippingAddress: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          phone: phone.trim(),
+          address1: address1.trim(),
+          address2: address2?.trim() || '',
+          city: city.trim(),
+          state: state?.trim() || '',
+          postalCode: postalCode.trim(),
+          country: country?.trim() || 'India',
+        } as object,
+        notes: notes?.trim() || null,
+        metadata: {
+          source: 'public_form',
+          ...(hasAmountPaid && { amountPaid: Number(amountPaid) }),
+        } as object,
+        items: {
+          create: items
+            .filter(i => i.productName?.trim())
+            .map(item => ({
+              productName: item.productName.trim(),
+              variantName: item.variantName?.trim() || null,
+              quantity: Math.max(1, Number(item.quantity) || 1),
+              price: 0,
+              total: 0,
+              metadata: item.note?.trim() ? { note: item.note.trim() } as object : undefined,
+            })),
+        },
+      },
+      include: { items: true },
+    })
+
+    res.json({ success: true, data: { orderNumber: order.orderNumber, id: order.id } })
+  } catch (err) {
+    console.error('Public order error:', err)
+    res.status(500).json({ success: false, error: 'Failed to submit order' })
+  }
+})
+
+// ============================================================
 // ADMIN ORDER EDIT
 // ============================================================
 

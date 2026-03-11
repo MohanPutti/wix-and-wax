@@ -480,6 +480,18 @@ class ApiClient {
     })
   }
 
+  async submitPublicOrder(data: {
+    firstName: string; lastName: string; phone: string; email?: string
+    address1: string; address2?: string; city: string; state?: string; postalCode: string; country?: string
+    items: Array<{ productName: string; variantName?: string; quantity: number; note?: string }>
+    notes?: string; amountPaid?: number
+  }) {
+    return this.request<ApiResponse<{ orderNumber: string; id: string }>>('/public/orders', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
   async deleteOrder(id: string) {
     return this.request<ApiResponse<{ id: string }>>(`/orders/${id}`, {
       method: 'DELETE',

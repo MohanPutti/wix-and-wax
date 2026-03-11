@@ -14,16 +14,17 @@ interface StockRow {
   quantity: number
   value: number
   latestPrice: number
+  entries: InventoryEntry[]
 }
 
 function computeStock(types: InventoryType[], entries: InventoryEntry[]): StockRow[] {
   return types.map(type => {
     const typeEntries = entries.filter(e => e.typeId === type.id)
     const quantity = typeEntries.reduce((sum, e) => sum + Number(e.quantity), 0)
-    const latestEntry = typeEntries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-    const latestPrice = latestEntry ? Number(latestEntry.pricePerUnit) : 0
-    const value = quantity * latestPrice
-    return { type, quantity, value, latestPrice }
+    const totalCost = typeEntries.reduce((sum, e) => sum + Number(e.totalCost), 0)
+    const avgPrice = quantity > 0 ? totalCost / quantity : 0
+    const value = quantity * avgPrice
+    return { type, quantity, value, latestPrice: avgPrice, entries: typeEntries }
   })
 }
 
@@ -42,6 +43,9 @@ export default function AdminInventory() {
   const [typeName, setTypeName] = useState('')
   const [typeUnit, setTypeUnit] = useState('')
   const [isAddingType, setIsAddingType] = useState(false)
+
+  // Expanded row for entry history
+  const [expandedRow, setExpandedRow] = useState<string | null>(null)
 
   // Stock adjustment modal
   const [modal, setModal] = useState<{ mode: ModalMode; typeId: string } | null>(null)
@@ -211,40 +215,83 @@ export default function AdminInventory() {
             </thead>
             <tbody className="divide-y divide-warm-100">
               {stock.map(row => (
-                <tr key={row.type.id} className="hover:bg-warm-50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-warm-900">
-                    {row.type.name}
-                    {row.type.unit && <span className="ml-1 text-xs text-warm-400 font-normal">({row.type.unit})</span>}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <span className={`font-semibold ${row.quantity <= 0 ? 'text-red-500' : 'text-warm-900'}`}>
-                      {Number(row.quantity).toLocaleString('en-IN')}
-                    </span>
-                    {row.type.unit && <span className="ml-1 text-xs text-warm-400">{row.type.unit}</span>}
-                  </td>
-                  <td className="px-6 py-4 text-right text-warm-600">
-                    {row.latestPrice > 0 ? fmt(row.latestPrice) : '—'}
-                  </td>
-                  <td className="px-6 py-4 text-right font-semibold text-warm-900">
-                    {row.value > 0 ? fmt(row.value) : '—'}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                <>
+                  <tr key={row.type.id} className="hover:bg-warm-50 transition-colors">
+                    <td className="px-6 py-4 font-medium text-warm-900">
+                      {row.type.name}
+                      {row.type.unit && <span className="ml-1 text-xs text-warm-400 font-normal">({row.type.unit})</span>}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <span className={`font-semibold ${row.quantity <= 0 ? 'text-red-500' : 'text-warm-900'}`}>
+                        {Number(row.quantity).toLocaleString('en-IN')}
+                      </span>
+                      {row.type.unit && <span className="ml-1 text-xs text-warm-400">{row.type.unit}</span>}
+                    </td>
+                    <td className="px-6 py-4 text-right text-warm-600">
                       <button
-                        onClick={() => openModal('add', row.type.id)}
-                        className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 border border-amber-300 hover:border-amber-400 px-2 py-1 rounded-lg transition-colors"
+                        onClick={() => setExpandedRow(expandedRow === row.type.id ? null : row.type.id)}
+                        className="inline-flex items-center gap-1 hover:text-amber-600 transition-colors"
                       >
-                        <PlusIcon className="h-3.5 w-3.5" /> Add Stock
+                        {row.latestPrice > 0 ? fmt(row.latestPrice) : '—'}
+                        {row.entries.length > 0 && (
+                          expandedRow === row.type.id
+                            ? <ChevronUpIcon className="h-3.5 w-3.5" />
+                            : <ChevronDownIcon className="h-3.5 w-3.5" />
+                        )}
                       </button>
-                      <button
-                        onClick={() => openModal('use', row.type.id)}
-                        className="flex items-center gap-1 text-xs text-warm-500 hover:text-warm-700 border border-warm-200 hover:border-warm-400 px-2 py-1 rounded-lg transition-colors"
-                      >
-                        <MinusIcon className="h-3.5 w-3.5" /> Use
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                    </td>
+                    <td className="px-6 py-4 text-right font-semibold text-warm-900">
+                      {row.value > 0 ? fmt(row.value) : '—'}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => openModal('add', row.type.id)}
+                          className="flex items-center gap-1 text-xs text-amber-600 hover:text-amber-700 border border-amber-300 hover:border-amber-400 px-2 py-1 rounded-lg transition-colors"
+                        >
+                          <PlusIcon className="h-3.5 w-3.5" /> Add Stock
+                        </button>
+                        <button
+                          onClick={() => openModal('use', row.type.id)}
+                          className="flex items-center gap-1 text-xs text-warm-500 hover:text-warm-700 border border-warm-200 hover:border-warm-400 px-2 py-1 rounded-lg transition-colors"
+                        >
+                          <MinusIcon className="h-3.5 w-3.5" /> Use
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                  {expandedRow === row.type.id && (
+                    <tr key={`${row.type.id}-history`} className="bg-warm-50">
+                      <td colSpan={5} className="px-8 py-3">
+                        <div className="text-xs text-warm-500 font-medium uppercase tracking-wide mb-2">Purchase History</div>
+                        <table className="w-full text-xs">
+                          <thead>
+                            <tr className="text-warm-400">
+                              <th className="text-left pb-1">Date</th>
+                              <th className="text-right pb-1">Qty</th>
+                              <th className="text-right pb-1">Price/Unit</th>
+                              <th className="text-right pb-1">Total</th>
+                              <th className="text-left pb-1 pl-4">Note</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-warm-100">
+                            {[...row.entries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map(e => (
+                              <tr key={e.id} className="text-warm-700">
+                                <td className="py-1.5">{new Date(e.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                                <td className={`py-1.5 text-right font-medium ${Number(e.quantity) < 0 ? 'text-red-500' : ''}`}>
+                                  {Number(e.quantity) > 0 ? '+' : ''}{Number(e.quantity).toLocaleString('en-IN')}
+                                </td>
+                                <td className="py-1.5 text-right">{Number(e.pricePerUnit) > 0 ? fmt(Number(e.pricePerUnit)) : '—'}</td>
+                                <td className="py-1.5 text-right font-medium">{Number(e.totalCost) !== 0 ? fmt(Number(e.totalCost)) : '—'}</td>
+                                <td className="py-1.5 pl-4 text-warm-400">{e.note || '—'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </td>
+                    </tr>
+                  )}
+                </>
               ))}
             </tbody>
           </table>
@@ -324,24 +371,24 @@ export default function AdminInventory() {
             onChange={e => setTypeName(e.target.value)}
           />
           <Input
-            placeholder="Unit (e.g. kg, pieces)"
+            placeholder="Unit (optional)"
             value={typeUnit}
             onChange={e => setTypeUnit(e.target.value)}
             className="w-40"
           />
-          <Button type="submit" variant="outline" isLoading={isAddingType}>
+<Button type="submit" variant="outline" isLoading={isAddingType}>
             Add
           </Button>
         </form>
         {types.length === 0 ? (
           <p className="text-sm text-warm-400">No types yet. Add one above.</p>
         ) : (
-          <div className="flex flex-wrap gap-2">
+          <div className="divide-y divide-warm-100 border border-warm-100 rounded-xl overflow-hidden">
             {types.map(t => (
-              <div key={t.id} className="flex items-center gap-2 bg-warm-100 px-3 py-1.5 rounded-lg text-sm text-warm-800">
-                <span>{t.name}{t.unit ? ` (${t.unit})` : ''}</span>
-                <button onClick={() => handleDeleteType(t.id)} className="text-warm-400 hover:text-red-600 transition-colors">
-                  <XMarkIcon className="h-4 w-4" />
+              <div key={t.id} className="flex items-center justify-between px-4 py-3 hover:bg-warm-50 transition-colors">
+                <span className="text-sm text-warm-800">{t.name}{t.unit ? <span className="ml-1 text-xs text-warm-400">({t.unit})</span> : ''}</span>
+                <button onClick={() => handleDeleteType(t.id)} className="p-1.5 text-warm-400 hover:text-red-600 transition-colors">
+                  <TrashIcon className="h-4 w-4" />
                 </button>
               </div>
             ))}

@@ -22,9 +22,10 @@ function computeStock(types: InventoryType[], entries: InventoryEntry[]): StockR
     const typeEntries = entries.filter(e => e.typeId === type.id)
     const quantity = typeEntries.reduce((sum, e) => sum + Number(e.quantity), 0)
     const totalCost = typeEntries.reduce((sum, e) => sum + Number(e.totalCost), 0)
-    const avgPrice = quantity > 0 ? totalCost / quantity : 0
-    const value = quantity * avgPrice
-    return { type, quantity, value, latestPrice: avgPrice, entries: typeEntries }
+    const purchaseEntries = typeEntries.filter(e => Number(e.quantity) > 0)
+    const lastEntry = purchaseEntries.length > 0 ? purchaseEntries[purchaseEntries.length - 1] : null
+    const latestPrice = lastEntry ? Number(lastEntry.pricePerUnit) : 0
+    return { type, quantity, value: totalCost, latestPrice, entries: typeEntries }
   })
 }
 
@@ -185,7 +186,7 @@ export default function AdminInventory() {
         <div className="bg-white rounded-2xl p-6 shadow-soft">
           <p className="text-sm text-warm-500 mb-1">Current Inventory Value</p>
           <p className="text-3xl font-semibold text-amber-600">{fmt(totalValue)}</p>
-          <p className="text-xs text-warm-400 mt-1">Stock × latest price per type</p>
+          <p className="text-xs text-warm-400 mt-1">Total actual cost across all purchases</p>
         </div>
         <div className="bg-white rounded-2xl p-6 shadow-soft">
           <p className="text-sm text-warm-500 mb-1">Total Invested (all time)</p>

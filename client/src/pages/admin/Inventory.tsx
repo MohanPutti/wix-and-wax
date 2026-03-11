@@ -24,7 +24,7 @@ function computeStock(types: InventoryType[], entries: InventoryEntry[]): StockR
     const totalCost = typeEntries.reduce((sum, e) => sum + Number(e.totalCost), 0)
     const purchaseEntries = typeEntries
       .filter(e => Number(e.quantity) > 0)
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     const lastEntry = purchaseEntries.length > 0 ? purchaseEntries[purchaseEntries.length - 1] : null
     const latestPrice = lastEntry ? Number(lastEntry.pricePerUnit) : 0
     return { type, quantity, value: totalCost, latestPrice, entries: typeEntries }

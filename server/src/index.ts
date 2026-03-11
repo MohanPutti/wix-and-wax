@@ -686,8 +686,8 @@ app.get('/api/inventory/summary', async (_req, res) => {
       const currentQty = Number(qtyAgg._sum.quantity ?? 0)
       if (currentQty <= 0) continue
       const latestEntry = await prisma.inventoryEntry.findFirst({
-        where: { typeId: t.id },
-        orderBy: { date: 'desc' },
+        where: { typeId: t.id, quantity: { gt: 0 } },
+        orderBy: { createdAt: 'desc' },
         select: { pricePerUnit: true },
       })
       if (latestEntry) currentValue += currentQty * Number(latestEntry.pricePerUnit)

@@ -114,51 +114,6 @@ app.use('/api', setupCartModule({
   defaultCurrency: 'INR',
 }))
 
-// Order metrics — must be before setupOrderModule to avoid being caught by core router
-app.get('/api/orders/metrics', requireAuth, async (req, res) => {
-  try {
-    const { status, paymentStatus, search } = req.query as Record<string, string>
-
-    const where: Record<string, unknown> = { deletedAt: null }
-    if (status) where.status = status
-    if (paymentStatus) where.paymentStatus = paymentStatus
-    if (search) {
-      where.OR = [
-        { orderNumber: { contains: search } },
-        { email: { contains: search } },
-      ]
-    }
-
-    const orders = await prisma.order.findMany({ where, select: { total: true, paymentStatus: true, metadata: true } })
-
-    let totalPaid = 0
-    let totalPending = 0
-
-    for (const o of orders) {
-      const total = Number(o.total) || 0
-      const meta = (o.metadata as Record<string, unknown>) || {}
-      const amountPaid = Number(meta.amountPaid) || 0
-
-      if (o.paymentStatus === 'paid') {
-        totalPaid += total
-      } else if (o.paymentStatus === 'partially_paid') {
-        totalPaid += amountPaid
-        totalPending += Math.max(0, total - amountPaid)
-      } else if (['pending', 'confirmed', 'processing', 'shipped', 'delivered'].includes(o.paymentStatus as string)) {
-        totalPending += total
-      }
-    }
-
-    const count = orders.length
-    const totalValue = orders.reduce((s, o) => s + (Number(o.total) || 0), 0)
-    const avgOrderValue = count > 0 ? totalValue / count : 0
-
-    res.json({ success: true, data: { count, totalPaid, totalPending, avgOrderValue } })
-  } catch (err) {
-    res.status(500).json({ success: false, error: 'Failed to fetch metrics' })
-  }
-})
-
 app.use('/api', setupOrderModule({
   prisma,
   verifyToken,
@@ -286,6 +241,33 @@ const requireAuth = async (req: express.Request, res: express.Response, next: ex
 
 // Cart service instance for custom routes
 const cartService = createCartService(prisma, { expirationDays: 30, defaultCurrency: 'INR' })
+
+// Order metrics (registered after requireAuth to avoid TDZ)
+app.get('/api/orders/metrics', requireAuth, async (req, res) => {
+  try {
+    const { status, paymentStatus, search } = req.query as Record<string, string>
+    const where: Record<string, unknown> = { deletedAt: null }
+    if (status) where.status = status
+    if (paymentStatus) where.paymentStatus = paymentStatus
+    if (search) where.OR = [{ orderNumber: { contains: search } }, { email: { contains: search } }]
+
+    const orders = await prisma.order.findMany({ where, select: { total: true, paymentStatus: true, metadata: true } })
+
+    let totalPaid = 0, totalPending = 0
+    for (const o of orders) {
+      const total = Number(o.total) || 0
+      const amountPaid = Number((o.metadata as Record<string, unknown>)?.amountPaid) || 0
+      if (o.paymentStatus === 'paid') { totalPaid += total }
+      else if (o.paymentStatus === 'partially_paid') { totalPaid += amountPaid; totalPending += Math.max(0, total - amountPaid) }
+      else if (['pending', 'confirmed', 'processing', 'shipped', 'delivered'].includes(o.paymentStatus as string)) { totalPending += total }
+    }
+    const count = orders.length
+    const avgOrderValue = count > 0 ? orders.reduce((s, o) => s + (Number(o.total) || 0), 0) / count : 0
+    res.json({ success: true, data: { count, totalPaid, totalPending, avgOrderValue } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch metrics' })
+  }
+})
 
 // Merge guest cart into authenticated user's cart on login/register
 app.post('/api/cart/merge', requireAuth, async (req, res) => {

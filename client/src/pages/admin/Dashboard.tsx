@@ -3,6 +3,8 @@ import { useOrders } from '../../hooks/useOrders'
 import { Link } from 'react-router-dom'
 import Spinner from '../../components/ui/Spinner'
 import Badge from '../../components/ui/Badge'
+import { useEffect, useState } from 'react'
+import { api } from '../../services/api'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
   pending: 'warning',
@@ -15,7 +17,12 @@ const statusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' 
 
 export default function AdminDashboard() {
   const { products, isLoading: productsLoading } = useProducts({ limit: 100 })
-  const { orders, isLoading: ordersLoading } = useOrders({ limit: 100 })
+  const { orders, isLoading: ordersLoading } = useOrders({ limit: 5 })
+  const [metrics, setMetrics] = useState<{ count: number; totalPaid: number; totalPending: number; avgOrderValue: number } | null>(null)
+
+  useEffect(() => {
+    api.getOrderMetrics().then((res: { success: boolean; data: typeof metrics }) => { if (res.success) setMetrics(res.data) })
+  }, [])
 
   const isLoading = productsLoading || ordersLoading
 
@@ -28,8 +35,8 @@ export default function AdminDashboard() {
   }
 
   const totalProducts = products.length
-  const totalOrders = orders.length
-  const totalRevenue = orders.reduce((sum, order) => sum + Number(order.total), 0)
+  const totalOrders = metrics?.count ?? 0
+  const totalRevenue = (metrics?.totalPaid ?? 0) + (metrics?.totalPending ?? 0)
   const pendingOrders = orders.filter((o) => o.status === 'pending').length
   const recentOrders = orders.slice(0, 5)
 

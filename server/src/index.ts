@@ -129,6 +129,50 @@ app.use('/api', setupCartModule({
   defaultCurrency: 'INR',
 }))
 
+// Monthly order stats for Data page — must be before setupOrderModule
+app.get('/api/orders/monthly', requireAuth, async (_req, res) => {
+  try {
+    const now = new Date()
+    const months: {
+      key: string; label: string; count: number
+      total: number; received: number; pending: number
+    }[] = []
+
+    for (let i = 11; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const end   = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+      const key   = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
+      const label = start.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+
+      const orders = await prisma.order.findMany({
+        where: { createdAt: { gte: start, lt: end }, deletedAt: null },
+        select: { total: true, paymentStatus: true, metadata: true },
+      })
+
+      let total = 0, received = 0, pending = 0
+      for (const o of orders) {
+        const amt = Number(o.total) || 0
+        const amountPaid = Number((o.metadata as Record<string, unknown>)?.amountPaid) || 0
+        total += amt
+        if (o.paymentStatus === 'paid') {
+          received += amt
+        } else if (o.paymentStatus === 'partially_paid') {
+          received += amountPaid
+          pending  += Math.max(0, amt - amountPaid)
+        } else {
+          pending += amt
+        }
+      }
+
+      months.push({ key, label, count: orders.length, total, received, pending })
+    }
+
+    res.json({ success: true, data: months })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch monthly orders' })
+  }
+})
+
 // Must be registered before setupOrderModule so 'metrics' isn't treated as an order ID
 app.get('/api/orders/metrics', requireAuth, async (req, res) => {
   try {
@@ -904,6 +948,90 @@ app.get('/api/inventory/summary', async (_req, res) => {
     res.json({ success: true, data: { totalInvested, currentValue } })
   } catch {
     res.status(500).json({ success: false, error: 'Failed to compute inventory summary' })
+  }
+})
+
+// ============================================================
+// EXPENSE MANAGEMENT
+// ============================================================
+
+app.get('/api/expenses/types', requireAuth, async (_req, res) => {
+  try {
+    const types = await prisma.expenseType.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: types })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch expense types' })
+  }
+})
+
+app.post('/api/expenses/types', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body as { name: string }
+    const type = await prisma.expenseType.create({ data: { id: uuidv4(), name: name.trim() } })
+    res.json({ success: true, data: type })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create expense type' })
+  }
+})
+
+app.delete('/api/expenses/types/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.expenseType.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to delete expense type' })
+  }
+})
+
+app.get('/api/expenses', requireAuth, async (_req, res) => {
+  try {
+    const expenses = await prisma.expense.findMany({
+      orderBy: { date: 'desc' },
+      include: { type: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: expenses })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch expenses' })
+  }
+})
+
+app.post('/api/expenses', requireAuth, async (req, res) => {
+  try {
+    const { name, amount, typeId, date, note } = req.body as {
+      name: string; amount: number; typeId: string; date: string; note?: string
+    }
+    const expense = await prisma.expense.create({
+      data: { id: uuidv4(), name: name.trim(), amount, typeId, date: new Date(date), note: note?.trim() || null },
+      include: { type: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: expense })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create expense' })
+  }
+})
+
+app.put('/api/expenses/:id', requireAuth, async (req, res) => {
+  try {
+    const { name, amount, typeId, date, note } = req.body as {
+      name: string; amount: number; typeId: string; date: string; note?: string
+    }
+    const expense = await prisma.expense.update({
+      where: { id: req.params.id },
+      data: { name: name.trim(), amount, typeId, date: new Date(date), note: note?.trim() || null },
+      include: { type: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: expense })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to update expense' })
+  }
+})
+
+app.delete('/api/expenses/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.expense.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to delete expense' })
   }
 })
 

@@ -21,13 +21,15 @@ import { OrderList, OrderDetail, OrderConfirmation } from './pages/Orders'
 import TrackOrder from './pages/TrackOrder'
 
 // Admin Pages
-import AdminDashboard from './pages/admin/Dashboard'
 import { AdminProductList, AdminProductForm } from './pages/admin/Products'
 import { AdminOrderList, AdminOrderDetail } from './pages/admin/Orders'
 import AdminCategories from './pages/admin/Categories'
 import AdminCatalog from './pages/admin/Catalog'
 import AdminDiscounts from './pages/admin/Discounts'
 import AdminInventory from './pages/admin/Inventory'
+import AdminExpenses from './pages/admin/Expenses'
+import AdminData from './pages/admin/Data'
+import AdminCalculator from './pages/admin/Calculator'
 import AdminNewOrder from './pages/admin/NewOrder'
 import PublicOrderForm from './pages/PublicOrderForm'
 
@@ -180,7 +182,7 @@ function AppContent() {
         path="/admin"
         element={
           <AdminLayout>
-            <AdminDashboard />
+            <AdminData />
           </AdminLayout>
         }
       />
@@ -261,6 +263,30 @@ function AppContent() {
         element={
           <AdminLayout>
             <AdminInventory />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/expenses"
+        element={
+          <AdminLayout>
+            <AdminExpenses />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/data"
+        element={
+          <AdminLayout>
+            <AdminData />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/calculator"
+        element={
+          <AdminLayout>
+            <AdminCalculator />
           </AdminLayout>
         }
       />

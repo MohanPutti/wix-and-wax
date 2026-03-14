@@ -176,7 +176,7 @@ function ExpenseTrendChart({ expenses, types }: { expenses: Expense[]; types: Ex
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={{ stroke: '#e8e0d5' }} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={false} tickLine={false}
               tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
-            <Tooltip formatter={(v: number, name: string) => [formatCurrency(v), name]}
+            <Tooltip formatter={(v, name) => [formatCurrency(Number(v)), String(name)]}
               contentStyle={{ borderRadius: '10px', border: '1px solid #e8e0d5', fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
             {types.map((t) => (
@@ -214,8 +214,8 @@ function OrdersChart({ data }: { data: { label: string; count: number; total: nu
               tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
             <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={false} tickLine={false} />
             <Tooltip
-              formatter={(v: number, name: string) =>
-                name === 'Orders' ? [v, name] : [formatCurrency(v), name]
+              formatter={(v, name) =>
+                String(name) === 'Orders' ? [Number(v), String(name)] : [formatCurrency(Number(v)), String(name)]
               }
               contentStyle={{ borderRadius: '10px', border: '1px solid #e8e0d5', fontSize: 12 }}
             />
@@ -266,7 +266,7 @@ function RevenueVsExpensesChart({
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={{ stroke: '#e8e0d5' }} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={false} tickLine={false}
               tickFormatter={(v) => `₹${v >= 1000 ? `${(v / 1000).toFixed(0)}k` : v}`} />
-            <Tooltip formatter={(v: number, name: string) => [formatCurrency(v), name]}
+            <Tooltip formatter={(v, name) => [formatCurrency(Number(v)), String(name)]}
               contentStyle={{ borderRadius: '10px', border: '1px solid #e8e0d5', fontSize: 12 }} />
             <Legend wrapperStyle={{ fontSize: 12, paddingTop: 12 }} />
             <Bar dataKey="Revenue" fill="#f59e0b" opacity={0.85} radius={[4, 4, 0, 0]} />

@@ -219,25 +219,26 @@ export default function AdminCalculator() {
   const colourGrams = (colourPct / 100) * weight
   const colourCost  = (colourGrams / 100) * config.colourPricePer100ml
 
-  const wickCostVal    = includeWick ? config.wickCost : 0
-  const containerCost  = includeContainer ? latestPrice(containerTypeId) : 0
-  const packagingCost  = includePackaging ? latestPrice(packagingTypeId) : 0
+  const wickCostVal   = includeWick ? config.wickCost : 0
+  const containerCost = includeContainer ? latestPrice(containerTypeId) : 0
+  const packagingCost = includePackaging ? latestPrice(packagingTypeId) : 0
 
   const hasMissingPrice =
     (includeContainer && containerCost === null) ||
     (includePackaging && packagingCost === null)
 
-  // Base cost = everything EXCEPT packaging (multiplier applied to this)
+  // Base = only what gets marked up (container, wax, fragrance, colour, wick)
   const baseCost = hasMissingPrice ? null :
-    (containerCost ?? 0) + waxCost + fragranceCost + colourCost + wickCostVal + labourCost
+    (containerCost ?? 0) + waxCost + fragranceCost + colourCost + wickCostVal
 
-  // Selling price = (base × multiplier) + packaging — packaging not marked up
+  // Selling price = (base × multiplier) + labour + packaging — both added at cost after markup
   const sellingPrice = baseCost !== null
-    ? baseCost * multiplier + (packagingCost ?? 0)
+    ? baseCost * multiplier + labourCost + (packagingCost ?? 0)
     : null
 
+  // Total you actually spend
   const totalCost = baseCost !== null
-    ? baseCost + (packagingCost ?? 0)
+    ? baseCost + labourCost + (packagingCost ?? 0)
     : null
 
   const profit    = sellingPrice !== null && totalCost !== null ? sellingPrice - totalCost : null
@@ -385,7 +386,7 @@ export default function AdminCalculator() {
           {/* Labour */}
           <div className="bg-white rounded-xl shadow-soft p-6">
             <p className="font-semibold text-warm-900 mb-1">Labour Cost</p>
-            <p className="text-xs text-warm-400 mb-3">Manual entry — pouring, setting, trimming, etc.</p>
+            <p className="text-xs text-warm-400 mb-3">Added after multiplier — not marked up</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-500">₹</span>
               <input type="number" min="0" step="1" value={labourCost || ''}
@@ -421,9 +422,11 @@ export default function AdminCalculator() {
           {/* Cost Breakdown */}
           <div className="bg-white rounded-xl shadow-soft p-6">
             <p className="font-semibold text-warm-900 mb-2">Cost Breakdown</p>
-            <p className="text-xs text-warm-400 mb-4">Multiplier applied to base cost. Packaging added at cost.</p>
+            <p className="text-xs text-warm-400 mb-4">
+              Base × multiplier, then labour &amp; packaging added at cost.
+            </p>
 
-            {/* Base cost items */}
+            {/* Items subject to markup */}
             {includeContainer && (
               <CostRow label="Container" value={containerCost as number | null}
                 sub={containerTypeId ? types.find((t) => t.id === containerTypeId)?.name : undefined} />
@@ -435,18 +438,22 @@ export default function AdminCalculator() {
             <CostRow label="Colour" value={colourCost}
               sub={`${colourPct}% × ${weight}g = ${colourGrams.toFixed(1)}ml`} />
             {includeWick && <CostRow label="Wick" value={config.wickCost} />}
-            {labourCost > 0 && <CostRow label="Labour" value={labourCost} />}
 
-            <CostRow label="Base Cost" value={baseCost} highlight />
+            <CostRow label={`Base Cost × ${multiplier}`} value={baseCost} highlight />
 
-            {/* Packaging shown separately below */}
-            {includePackaging && (
-              <div className="mt-3 pt-3 border-t border-dashed border-warm-200">
-                <CostRow label="Packaging (at cost)" value={packagingCost as number | null}
-                  sub={packagingTypeId ? types.find((t) => t.id === packagingTypeId)?.name : undefined} />
-                <CostRow label="Total Cost" value={totalCost} highlight />
+            {/* Items added at cost after markup */}
+            {(labourCost > 0 || includePackaging) && (
+              <div className="mt-3 space-y-0">
+                <p className="text-xs text-warm-400 mb-1 pt-1">Added at cost (no markup)</p>
+                {labourCost > 0 && <CostRow label="Labour" value={labourCost} />}
+                {includePackaging && (
+                  <CostRow label="Packaging" value={packagingCost as number | null}
+                    sub={packagingTypeId ? types.find((t) => t.id === packagingTypeId)?.name : undefined} />
+                )}
               </div>
             )}
+
+            <CostRow label="Total Cost" value={totalCost} highlight />
 
             {hasMissingPrice && (
               <p className="text-xs text-amber-600 mt-3">
@@ -460,7 +467,7 @@ export default function AdminCalculator() {
             <div>
               <p className="font-semibold text-warm-900">Selling Price</p>
               <p className="text-xs text-warm-400 mt-0.5">
-                Multiplier × base cost{includePackaging ? ' + packaging at cost' : ''}
+                (Base × multiplier) + labour + packaging
               </p>
             </div>
 
@@ -472,6 +479,7 @@ export default function AdminCalculator() {
                 {baseCost > 0 && (
                   <div className="text-xs text-warm-400 bg-warm-50 rounded-lg px-3 py-2">
                     {fmt(baseCost)} × {multiplier}
+                    {labourCost > 0 ? ` + ${fmt(labourCost)} labour` : ''}
                     {includePackaging && packagingCost !== null ? ` + ${fmt(packagingCost)} packaging` : ''}
                     {' '}= <strong className="text-warm-700">{fmt(sellingPrice!)}</strong>
                   </div>

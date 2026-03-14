@@ -13,14 +13,12 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: 'https://www.wicksandwax.in',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: true,
       },
       '/uploads': {
-        target: 'https://www.wicksandwax.in',
+        target: 'http://localhost:3001',
         changeOrigin: true,
-        secure: true,
       },
     },
   },

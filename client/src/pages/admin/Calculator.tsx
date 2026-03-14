@@ -10,22 +10,22 @@ const WAX_TYPES = ['Soy', 'Gel', 'Mix'] as const
 type WaxType = (typeof WAX_TYPES)[number]
 
 interface Config {
-  waxPrices: Record<WaxType, number>
-  fragrancePricePerGram: number
-  colourPricePerGram: number
-  wickCost: number
+  waxPrices: Record<WaxType, number>   // ₹ per kg
+  fragrancePricePer100ml: number        // ₹ per 100ml bottle
+  colourPricePer100ml: number           // ₹ per 100ml bottle
+  wickCost: number                      // ₹ per piece
 }
 
 const DEFAULT_CONFIG: Config = {
-  waxPrices: { Soy: 0.3, Gel: 0.25, Mix: 0.28 },
-  fragrancePricePerGram: 1.5,
-  colourPricePerGram: 0.5,
+  waxPrices: { Soy: 300, Gel: 250, Mix: 280 },
+  fragrancePricePer100ml: 150,
+  colourPricePer100ml: 50,
   wickCost: 1,
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const formatCurrency = (n: number) =>
+const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
 
 function loadConfig(): Config {
@@ -38,9 +38,7 @@ function loadConfig(): Config {
 
 // ─── Slider ───────────────────────────────────────────────────────────────────
 
-function Slider({
-  label, value, min, max, step, onChange, format,
-}: {
+function Slider({ label, value, min, max, step, onChange, format }: {
   label: string; value: number; min: number; max: number; step: number
   onChange: (v: number) => void; format: (v: number) => string
 }) {
@@ -56,8 +54,7 @@ function Slider({
         className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
       />
       <div className="flex justify-between text-xs text-warm-400 mt-1">
-        <span>{format(min)}</span>
-        <span>{format(max)}</span>
+        <span>{format(min)}</span><span>{format(max)}</span>
       </div>
     </div>
   )
@@ -65,11 +62,7 @@ function Slider({
 
 // ─── Inventory Picker ─────────────────────────────────────────────────────────
 
-function InventoryPicker({
-  label, categories, types, entries,
-  selectedCategoryId, selectedTypeId,
-  onCategoryChange, onTypeChange,
-}: {
+function InventoryPicker({ label, categories, types, entries, selectedCategoryId, selectedTypeId, onCategoryChange, onTypeChange }: {
   label: string
   categories: InventoryCategory[]
   types: InventoryType[]
@@ -94,9 +87,7 @@ function InventoryPicker({
           className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm bg-white text-warm-900"
         >
           <option value="">Select category...</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
+          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
       </div>
       {selectedCategoryId && (
@@ -121,7 +112,7 @@ function InventoryPicker({
       {selectedTypeId && (
         <div className="text-xs rounded-lg px-3 py-2 bg-warm-50 border border-warm-200">
           {latestEntry
-            ? <span className="text-warm-700">Last price: <strong className="text-warm-900">{formatCurrency(latestEntry.pricePerUnit)}</strong> / unit</span>
+            ? <span className="text-warm-700">Last price: <strong className="text-warm-900">{fmt(latestEntry.pricePerUnit)}</strong> / unit</span>
             : <span className="text-amber-600">No price data — add an inventory entry first</span>
           }
         </div>
@@ -132,17 +123,32 @@ function InventoryPicker({
 
 // ─── Cost Row ─────────────────────────────────────────────────────────────────
 
-function CostRow({ label, value, sub, highlight }: { label: string; value: number | null; sub?: string; highlight?: boolean }) {
+function CostRow({ label, value, sub, highlight, dimmed }: {
+  label: string; value: number | null; sub?: string; highlight?: boolean; dimmed?: boolean
+}) {
   return (
-    <div className={`flex justify-between items-start py-2.5 ${highlight ? 'border-t-2 border-warm-200 mt-1' : 'border-b border-warm-100'}`}>
+    <div className={`flex justify-between items-start py-2.5 ${highlight ? 'border-t-2 border-warm-200 mt-1 pt-3' : 'border-b border-warm-100'} ${dimmed ? 'opacity-50' : ''}`}>
       <div>
-        <p className={`text-sm ${highlight ? 'font-bold text-warm-900' : 'text-warm-700'}`}>{label}</p>
-        {sub && <p className="text-xs text-warm-400">{sub}</p>}
+        <p className={`text-sm ${highlight ? 'font-bold text-warm-900 text-base' : 'text-warm-700'}`}>{label}</p>
+        {sub && <p className="text-xs text-warm-400 mt-0.5">{sub}</p>}
       </div>
-      <p className={`text-sm font-semibold ${highlight ? 'text-lg font-bold text-warm-900' : value === null ? 'text-amber-500' : 'text-warm-900'}`}>
-        {value === null ? 'No price' : formatCurrency(value)}
+      <p className={`font-semibold ${highlight ? 'text-lg font-bold text-warm-900' : value === null ? 'text-amber-500 text-sm' : 'text-warm-900 text-sm'}`}>
+        {value === null ? 'No price' : fmt(value)}
       </p>
     </div>
+  )
+}
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
+
+function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button
+      onClick={() => onChange(!value)}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${value ? 'bg-amber-500' : 'bg-warm-300'}`}
+    >
+      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+    </button>
   )
 }
 
@@ -153,12 +159,11 @@ export default function AdminCalculator() {
   const [showConfig, setShowConfig] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
-  // Inventory data
   const [categories, setCategories] = useState<InventoryCategory[]>([])
   const [types, setTypes] = useState<InventoryType[]>([])
   const [entries, setEntries] = useState<InventoryEntry[]>([])
 
-  // Calculator inputs
+  // Inputs
   const [includeContainer, setIncludeContainer] = useState(false)
   const [containerCategoryId, setContainerCategoryId] = useState('')
   const [containerTypeId, setContainerTypeId] = useState('')
@@ -167,17 +172,14 @@ export default function AdminCalculator() {
   const [fragrancePct, setFragrancePct] = useState(2)
   const [colourPct, setColourPct] = useState(2)
   const [includeWick, setIncludeWick] = useState(true)
+  const [labourCost, setLabourCost] = useState(0)
   const [includePackaging, setIncludePackaging] = useState(false)
   const [packagingCategoryId, setPackagingCategoryId] = useState('')
   const [packagingTypeId, setPackagingTypeId] = useState('')
   const [multiplier, setMultiplier] = useState(2.5)
 
   useEffect(() => {
-    Promise.all([
-      api.getInventoryCategories(),
-      api.getInventoryTypes(),
-      api.getInventoryEntries(),
-    ])
+    Promise.all([api.getInventoryCategories(), api.getInventoryTypes(), api.getInventoryEntries()])
       .then(([catRes, typRes, entRes]) => {
         if (catRes.success) setCategories(catRes.data)
         if (typRes.success) setTypes(typRes.data)
@@ -191,7 +193,12 @@ export default function AdminCalculator() {
     localStorage.setItem('candle-calculator-config', JSON.stringify(config))
   }, [config])
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
+  // ─── Derived ─────────────────────────────────────────────────────────────────
+
+  // Packaging category id — exclude from container picker
+  const packagingCatId = categories.find((c) => c.name.toLowerCase() === 'packaging')?.id ?? ''
+  const containerCategories = categories.filter((c) => c.id !== packagingCatId)
+  const packagingCategories = categories.filter((c) => c.id === packagingCatId)
 
   const latestPrice = (typeId: string): number | null => {
     if (!typeId) return null
@@ -201,51 +208,57 @@ export default function AdminCalculator() {
     return sorted.length > 0 ? sorted[0].pricePerUnit : null
   }
 
-  // ─── Calculations ────────────────────────────────────────────────────────────
+  // ─── Calculations ─────────────────────────────────────────────────────────────
+  // Wax: price per kg → ₹/gram = price_per_kg / 1000
+  const waxCost = weight * (config.waxPrices[waxType] / 1000)
 
-  const containerCost = includeContainer ? latestPrice(containerTypeId) : 0
-  const waxCost       = weight * (config.waxPrices[waxType] ?? 0)
-  const fragranceCost = (fragrancePct / 100) * weight * config.fragrancePricePerGram
-  const colourCost    = (colourPct / 100) * weight * config.colourPricePerGram
-  const wickCost      = includeWick ? config.wickCost : 0
-  const packagingCost = includePackaging ? latestPrice(packagingTypeId) : 0
+  // Fragrance: price per 100ml → used ml = (pct/100) × weight_g ≈ grams; cost = used_ml/100 × price
+  const fragranceGrams = (fragrancePct / 100) * weight
+  const fragranceCost  = (fragranceGrams / 100) * config.fragrancePricePer100ml
+
+  const colourGrams = (colourPct / 100) * weight
+  const colourCost  = (colourGrams / 100) * config.colourPricePer100ml
+
+  const wickCostVal    = includeWick ? config.wickCost : 0
+  const containerCost  = includeContainer ? latestPrice(containerTypeId) : 0
+  const packagingCost  = includePackaging ? latestPrice(packagingTypeId) : 0
 
   const hasMissingPrice =
     (includeContainer && containerCost === null) ||
     (includePackaging && packagingCost === null)
 
-  const totalCost = hasMissingPrice
-    ? null
-    : (containerCost ?? 0) + waxCost + fragranceCost + colourCost + wickCost + (packagingCost ?? 0)
+  // Base cost = everything EXCEPT packaging (multiplier applied to this)
+  const baseCost = hasMissingPrice ? null :
+    (containerCost ?? 0) + waxCost + fragranceCost + colourCost + wickCostVal + labourCost
 
-  const sellingPrice = totalCost !== null ? totalCost * multiplier : null
-  const profit       = sellingPrice !== null && totalCost !== null ? sellingPrice - totalCost : null
-  const marginPct    = sellingPrice !== null && sellingPrice > 0 && profit !== null
-    ? (profit / sellingPrice) * 100
+  // Selling price = (base × multiplier) + packaging — packaging not marked up
+  const sellingPrice = baseCost !== null
+    ? baseCost * multiplier + (packagingCost ?? 0)
     : null
 
-  // ─── Config update helpers ───────────────────────────────────────────────────
+  const totalCost = baseCost !== null
+    ? baseCost + (packagingCost ?? 0)
+    : null
 
-  const updateWaxPrice = (type: WaxType, val: string) =>
-    setConfig((c) => ({ ...c, waxPrices: { ...c.waxPrices, [type]: parseFloat(val) || 0 } }))
+  const profit    = sellingPrice !== null && totalCost !== null ? sellingPrice - totalCost : null
+  const marginPct = sellingPrice !== null && sellingPrice > 0 && profit !== null
+    ? (profit / sellingPrice) * 100 : null
+
+  const updateWaxPrice = (wt: WaxType, val: string) =>
+    setConfig((c) => ({ ...c, waxPrices: { ...c.waxPrices, [wt]: parseFloat(val) || 0 } }))
 
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-[60vh]">
-        <Spinner size="lg" />
-      </div>
-    )
+    return <div className="flex justify-center items-center min-h-[60vh]"><Spinner size="lg" /></div>
   }
 
   return (
     <div className="max-w-5xl">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="font-serif text-3xl font-semibold text-warm-900">Candle Cost Calculator</h1>
         <p className="text-warm-500 text-sm mt-1">Calculate production cost and ideal selling price for a candle</p>
       </div>
 
-      {/* Config Panel */}
+      {/* ── Config Panel ── */}
       <div className="bg-white rounded-xl shadow-soft mb-6">
         <button
           onClick={() => setShowConfig((v) => !v)}
@@ -253,57 +266,39 @@ export default function AdminCalculator() {
         >
           <div>
             <p className="font-semibold text-warm-900">Configure Ingredient Prices</p>
-            <p className="text-xs text-warm-400 mt-0.5">Set price per gram for wax types, fragrance, and colour</p>
+            <p className="text-xs text-warm-400 mt-0.5">Wax ₹/kg · Fragrance &amp; Colour ₹/100ml · Wick ₹/piece</p>
           </div>
-          {showConfig
-            ? <ChevronUpIcon className="h-5 w-5 text-warm-400" />
-            : <ChevronDownIcon className="h-5 w-5 text-warm-400" />
-          }
+          {showConfig ? <ChevronUpIcon className="h-5 w-5 text-warm-400" /> : <ChevronDownIcon className="h-5 w-5 text-warm-400" />}
         </button>
 
         {showConfig && (
           <div className="px-6 pb-6 border-t border-warm-100">
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-              {/* Wax prices */}
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-5">
               {WAX_TYPES.map((wt) => (
                 <div key={wt}>
-                  <label className="block text-sm font-medium text-warm-700 mb-1">
-                    {wt} Wax — ₹ per gram
-                  </label>
-                  <input
-                    type="number" min="0" step="0.01"
-                    value={config.waxPrices[wt]}
+                  <label className="block text-sm font-medium text-warm-700 mb-1">{wt} Wax — ₹ per kg</label>
+                  <input type="number" min="0" step="1" value={config.waxPrices[wt]}
                     onChange={(e) => updateWaxPrice(wt, e.target.value)}
-                    className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-                  />
+                    className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
                 </div>
               ))}
               <div>
-                <label className="block text-sm font-medium text-warm-700 mb-1">Fragrance — ₹ per gram</label>
-                <input
-                  type="number" min="0" step="0.01"
-                  value={config.fragrancePricePerGram}
-                  onChange={(e) => setConfig((c) => ({ ...c, fragrancePricePerGram: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-                />
+                <label className="block text-sm font-medium text-warm-700 mb-1">Fragrance — ₹ per 100ml</label>
+                <input type="number" min="0" step="1" value={config.fragrancePricePer100ml}
+                  onChange={(e) => setConfig((c) => ({ ...c, fragrancePricePer100ml: parseFloat(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-warm-700 mb-1">Colour — ₹ per gram</label>
-                <input
-                  type="number" min="0" step="0.01"
-                  value={config.colourPricePerGram}
-                  onChange={(e) => setConfig((c) => ({ ...c, colourPricePerGram: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-                />
+                <label className="block text-sm font-medium text-warm-700 mb-1">Colour — ₹ per 100ml</label>
+                <input type="number" min="0" step="1" value={config.colourPricePer100ml}
+                  onChange={(e) => setConfig((c) => ({ ...c, colourPricePer100ml: parseFloat(e.target.value) || 0 }))}
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-warm-700 mb-1">Wick cost — ₹ per piece</label>
-                <input
-                  type="number" min="0" step="0.5"
-                  value={config.wickCost}
+                <label className="block text-sm font-medium text-warm-700 mb-1">Wick — ₹ per piece</label>
+                <input type="number" min="0" step="0.5" value={config.wickCost}
                   onChange={(e) => setConfig((c) => ({ ...c, wickCost: parseFloat(e.target.value) || 0 }))}
-                  className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-                />
+                  className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
               </div>
             </div>
             <p className="text-xs text-warm-400 mt-4">Prices are saved automatically in your browser.</p>
@@ -320,24 +315,15 @@ export default function AdminCalculator() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="font-semibold text-warm-900">Container</p>
-                <p className="text-xs text-warm-400">Optional — e.g. glass jar, tin</p>
+                <p className="text-xs text-warm-400">Optional — glass, urli, etc.</p>
               </div>
-              <button
-                onClick={() => { setIncludeContainer((v) => !v); setContainerCategoryId(''); setContainerTypeId('') }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${includeContainer ? 'bg-amber-500' : 'bg-warm-300'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${includeContainer ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+              <Toggle value={includeContainer} onChange={(v) => { setIncludeContainer(v); setContainerCategoryId(''); setContainerTypeId('') }} />
             </div>
             {includeContainer && (
-              <InventoryPicker
-                label="Container"
-                categories={categories} types={types} entries={entries}
-                selectedCategoryId={containerCategoryId}
-                selectedTypeId={containerTypeId}
-                onCategoryChange={setContainerCategoryId}
-                onTypeChange={setContainerTypeId}
-              />
+              <InventoryPicker label="Container"
+                categories={containerCategories} types={types} entries={entries}
+                selectedCategoryId={containerCategoryId} selectedTypeId={containerTypeId}
+                onCategoryChange={setContainerCategoryId} onTypeChange={setContainerTypeId} />
             )}
           </div>
 
@@ -345,32 +331,23 @@ export default function AdminCalculator() {
           <div className="bg-white rounded-xl shadow-soft p-6 space-y-4">
             <p className="font-semibold text-warm-900">Wax</p>
             <div>
-              <label className="block text-sm font-medium text-warm-700 mb-2">Weight (grams)</label>
-              <input
-                type="number" min="1" step="1" value={weight}
+              <label className="block text-sm font-medium text-warm-700 mb-1">Weight (grams)</label>
+              <input type="number" min="1" step="1" value={weight}
                 onChange={(e) => setWeight(Math.max(1, Number(e.target.value)))}
-                className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm"
-              />
+                className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
             </div>
             <div>
               <label className="block text-sm font-medium text-warm-700 mb-2">Wax Type</label>
               <div className="grid grid-cols-3 gap-2">
                 {WAX_TYPES.map((wt) => (
-                  <button
-                    key={wt}
-                    onClick={() => setWaxType(wt)}
-                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${
-                      waxType === wt
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-warm-100 text-warm-700 hover:bg-warm-200'
-                    }`}
-                  >
+                  <button key={wt} onClick={() => setWaxType(wt)}
+                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${waxType === wt ? 'bg-amber-500 text-white' : 'bg-warm-100 text-warm-700 hover:bg-warm-200'}`}>
                     {wt}
                   </button>
                 ))}
               </div>
-              <p className="text-xs text-warm-400 mt-1">
-                Price: {formatCurrency(config.waxPrices[waxType])}/g → cost for {weight}g: {formatCurrency(waxCost)}
+              <p className="text-xs text-warm-400 mt-2">
+                {fmt(config.waxPrices[waxType])}/kg → {weight}g costs <strong className="text-warm-700">{fmt(waxCost)}</strong>
               </p>
             </div>
           </div>
@@ -378,24 +355,20 @@ export default function AdminCalculator() {
           {/* Fragrance & Colour */}
           <div className="bg-white rounded-xl shadow-soft p-6 space-y-5">
             <p className="font-semibold text-warm-900">Fragrance &amp; Colour</p>
-            <Slider
-              label="Fragrance %"
-              value={fragrancePct} min={1} max={5} step={0.5}
-              onChange={setFragrancePct}
-              format={(v) => `${v}%`}
-            />
-            <p className="text-xs text-warm-400 -mt-2">
-              {fragrancePct}% of {weight}g = {(fragrancePct / 100 * weight).toFixed(1)}g @ {formatCurrency(config.fragrancePricePerGram)}/g = {formatCurrency(fragranceCost)}
-            </p>
-            <Slider
-              label="Colour %"
-              value={colourPct} min={1} max={5} step={0.5}
-              onChange={setColourPct}
-              format={(v) => `${v}%`}
-            />
-            <p className="text-xs text-warm-400 -mt-2">
-              {colourPct}% of {weight}g = {(colourPct / 100 * weight).toFixed(1)}g @ {formatCurrency(config.colourPricePerGram)}/g = {formatCurrency(colourCost)}
-            </p>
+            <div className="space-y-1">
+              <Slider label="Fragrance %" value={fragrancePct} min={1} max={5} step={0.5}
+                onChange={setFragrancePct} format={(v) => `${v}%`} />
+              <p className="text-xs text-warm-400">
+                {fragrancePct}% × {weight}g = {fragranceGrams.toFixed(1)}ml @ {fmt(config.fragrancePricePer100ml)}/100ml = <strong className="text-warm-700">{fmt(fragranceCost)}</strong>
+              </p>
+            </div>
+            <div className="space-y-1">
+              <Slider label="Colour %" value={colourPct} min={1} max={5} step={0.5}
+                onChange={setColourPct} format={(v) => `${v}%`} />
+              <p className="text-xs text-warm-400">
+                {colourPct}% × {weight}g = {colourGrams.toFixed(1)}ml @ {fmt(config.colourPricePer100ml)}/100ml = <strong className="text-warm-700">{fmt(colourCost)}</strong>
+              </p>
+            </div>
           </div>
 
           {/* Wick */}
@@ -403,40 +376,41 @@ export default function AdminCalculator() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="font-semibold text-warm-900">Wick</p>
-                <p className="text-xs text-warm-400">{formatCurrency(config.wickCost)} per piece</p>
+                <p className="text-xs text-warm-400">{fmt(config.wickCost)} per piece</p>
               </div>
-              <button
-                onClick={() => setIncludeWick((v) => !v)}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${includeWick ? 'bg-amber-500' : 'bg-warm-300'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${includeWick ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+              <Toggle value={includeWick} onChange={setIncludeWick} />
+            </div>
+          </div>
+
+          {/* Labour */}
+          <div className="bg-white rounded-xl shadow-soft p-6">
+            <p className="font-semibold text-warm-900 mb-1">Labour Cost</p>
+            <p className="text-xs text-warm-400 mb-3">Manual entry — pouring, setting, trimming, etc.</p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-warm-500">₹</span>
+              <input type="number" min="0" step="1" value={labourCost || ''}
+                placeholder="0"
+                onChange={(e) => setLabourCost(parseFloat(e.target.value) || 0)}
+                className="w-full pl-7 pr-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
             </div>
           </div>
 
           {/* Packaging */}
           <div className="bg-white rounded-xl shadow-soft p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-1">
               <div>
                 <p className="font-semibold text-warm-900">Packaging</p>
-                <p className="text-xs text-warm-400">Box, wrap, label, etc.</p>
+                <p className="text-xs text-warm-400">Added after multiplier — not marked up</p>
               </div>
-              <button
-                onClick={() => { setIncludePackaging((v) => !v); setPackagingCategoryId(''); setPackagingTypeId('') }}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${includePackaging ? 'bg-amber-500' : 'bg-warm-300'}`}
-              >
-                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${includePackaging ? 'translate-x-6' : 'translate-x-1'}`} />
-              </button>
+              <Toggle value={includePackaging} onChange={(v) => { setIncludePackaging(v); setPackagingCategoryId(''); setPackagingTypeId('') }} />
             </div>
             {includePackaging && (
-              <InventoryPicker
-                label="Packaging"
-                categories={categories} types={types} entries={entries}
-                selectedCategoryId={packagingCategoryId}
-                selectedTypeId={packagingTypeId}
-                onCategoryChange={setPackagingCategoryId}
-                onTypeChange={setPackagingTypeId}
-              />
+              <div className="mt-4">
+                <InventoryPicker label="Packaging"
+                  categories={packagingCategories.length > 0 ? packagingCategories : categories} types={types} entries={entries}
+                  selectedCategoryId={packagingCategoryId} selectedTypeId={packagingTypeId}
+                  onCategoryChange={setPackagingCategoryId} onTypeChange={setPackagingTypeId} />
+              </div>
             )}
           </div>
         </div>
@@ -446,70 +420,72 @@ export default function AdminCalculator() {
 
           {/* Cost Breakdown */}
           <div className="bg-white rounded-xl shadow-soft p-6">
-            <p className="font-semibold text-warm-900 mb-4">Cost Breakdown</p>
-            <div className="space-y-0">
-              {includeContainer && (
-                <CostRow
-                  label="Container"
-                  value={containerCost as number | null}
-                  sub={containerTypeId ? types.find((t) => t.id === containerTypeId)?.name : undefined}
-                />
-              )}
-              <CostRow
-                label={`Wax (${waxType})`}
-                value={waxCost}
-                sub={`${weight}g @ ${formatCurrency(config.waxPrices[waxType])}/g`}
-              />
-              <CostRow
-                label="Fragrance"
-                value={fragranceCost}
-                sub={`${fragrancePct}% of ${weight}g @ ${formatCurrency(config.fragrancePricePerGram)}/g`}
-              />
-              <CostRow
-                label="Colour"
-                value={colourCost}
-                sub={`${colourPct}% of ${weight}g @ ${formatCurrency(config.colourPricePerGram)}/g`}
-              />
-              {includeWick && (
-                <CostRow label="Wick" value={config.wickCost} />
-              )}
-              {includePackaging && (
-                <CostRow
-                  label="Packaging"
-                  value={packagingCost as number | null}
-                  sub={packagingTypeId ? types.find((t) => t.id === packagingTypeId)?.name : undefined}
-                />
-              )}
-              <CostRow label="Total Cost" value={totalCost} highlight />
-            </div>
+            <p className="font-semibold text-warm-900 mb-2">Cost Breakdown</p>
+            <p className="text-xs text-warm-400 mb-4">Multiplier applied to base cost. Packaging added at cost.</p>
+
+            {/* Base cost items */}
+            {includeContainer && (
+              <CostRow label="Container" value={containerCost as number | null}
+                sub={containerTypeId ? types.find((t) => t.id === containerTypeId)?.name : undefined} />
+            )}
+            <CostRow label={`Wax (${waxType})`} value={waxCost}
+              sub={`${weight}g @ ${fmt(config.waxPrices[waxType])}/kg`} />
+            <CostRow label="Fragrance" value={fragranceCost}
+              sub={`${fragrancePct}% × ${weight}g = ${fragranceGrams.toFixed(1)}ml`} />
+            <CostRow label="Colour" value={colourCost}
+              sub={`${colourPct}% × ${weight}g = ${colourGrams.toFixed(1)}ml`} />
+            {includeWick && <CostRow label="Wick" value={config.wickCost} />}
+            {labourCost > 0 && <CostRow label="Labour" value={labourCost} />}
+
+            <CostRow label="Base Cost" value={baseCost} highlight />
+
+            {/* Packaging shown separately below */}
+            {includePackaging && (
+              <div className="mt-3 pt-3 border-t border-dashed border-warm-200">
+                <CostRow label="Packaging (at cost)" value={packagingCost as number | null}
+                  sub={packagingTypeId ? types.find((t) => t.id === packagingTypeId)?.name : undefined} />
+                <CostRow label="Total Cost" value={totalCost} highlight />
+              </div>
+            )}
+
             {hasMissingPrice && (
               <p className="text-xs text-amber-600 mt-3">
-                Some items have no price data in inventory. Add entries to the inventory module first.
+                Some items have no price data in inventory. Add entries to the Inventory module first.
               </p>
             )}
           </div>
 
           {/* Selling Price */}
           <div className="bg-white rounded-xl shadow-soft p-6 space-y-5">
-            <p className="font-semibold text-warm-900">Selling Price</p>
-            <Slider
-              label="Price Multiplier"
-              value={multiplier} min={1} max={5} step={0.5}
-              onChange={setMultiplier}
-              format={(v) => `${v}×`}
-            />
+            <div>
+              <p className="font-semibold text-warm-900">Selling Price</p>
+              <p className="text-xs text-warm-400 mt-0.5">
+                Multiplier × base cost{includePackaging ? ' + packaging at cost' : ''}
+              </p>
+            </div>
 
-            {totalCost !== null ? (
-              <div className="space-y-3 mt-2">
+            <Slider label="Price Multiplier" value={multiplier} min={1} max={5} step={0.5}
+              onChange={setMultiplier} format={(v) => `${v}×`} />
+
+            {baseCost !== null ? (
+              <div className="space-y-3">
+                {baseCost > 0 && (
+                  <div className="text-xs text-warm-400 bg-warm-50 rounded-lg px-3 py-2">
+                    {fmt(baseCost)} × {multiplier}
+                    {includePackaging && packagingCost !== null ? ` + ${fmt(packagingCost)} packaging` : ''}
+                    {' '}= <strong className="text-warm-700">{fmt(sellingPrice!)}</strong>
+                  </div>
+                )}
+
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
                   <p className="text-xs text-amber-700 font-medium uppercase tracking-wide mb-1">Selling Price</p>
-                  <p className="text-4xl font-bold text-amber-600">{formatCurrency(sellingPrice!)}</p>
-                  <p className="text-xs text-amber-700 mt-1">{multiplier}× cost of {formatCurrency(totalCost)}</p>
+                  <p className="text-4xl font-bold text-amber-600">{fmt(sellingPrice!)}</p>
                 </div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <p className="text-xs text-green-700 font-medium uppercase tracking-wide mb-1">Profit</p>
-                    <p className="text-2xl font-bold text-green-600">{formatCurrency(profit!)}</p>
+                    <p className="text-2xl font-bold text-green-600">{fmt(profit!)}</p>
                   </div>
                   <div className="bg-green-50 border border-green-200 rounded-xl p-4">
                     <p className="text-xs text-green-700 font-medium uppercase tracking-wide mb-1">Margin</p>
@@ -517,20 +493,12 @@ export default function AdminCalculator() {
                   </div>
                 </div>
 
-                {/* Quick multiplier buttons */}
                 <div>
                   <p className="text-xs text-warm-400 mb-2">Quick select</p>
                   <div className="grid grid-cols-5 gap-2">
                     {[1.5, 2, 2.5, 3, 4].map((m) => (
-                      <button
-                        key={m}
-                        onClick={() => setMultiplier(m)}
-                        className={`py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                          multiplier === m
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-warm-100 text-warm-700 hover:bg-warm-200'
-                        }`}
-                      >
+                      <button key={m} onClick={() => setMultiplier(m)}
+                        className={`py-1.5 rounded-lg text-sm font-medium transition-colors ${multiplier === m ? 'bg-amber-500 text-white' : 'bg-warm-100 text-warm-700 hover:bg-warm-200'}`}>
                         {m}×
                       </button>
                     ))}
@@ -539,7 +507,7 @@ export default function AdminCalculator() {
               </div>
             ) : (
               <div className="bg-warm-50 rounded-xl p-5 text-center text-warm-400 text-sm">
-                Fix missing inventory prices above to see selling price
+                Fix missing inventory prices to see selling price
               </div>
             )}
           </div>

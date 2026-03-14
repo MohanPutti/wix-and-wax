@@ -205,7 +205,7 @@ export default function AdminCalculator() {
     const sorted = entries
       .filter((e) => e.typeId === typeId)
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    return sorted.length > 0 ? sorted[0].pricePerUnit : null
+    return sorted.length > 0 ? Number(sorted[0].pricePerUnit) : null
   }
 
   // ─── Calculations ─────────────────────────────────────────────────────────────

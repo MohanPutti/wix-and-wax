@@ -29,6 +29,7 @@ import AdminDiscounts from './pages/admin/Discounts'
 import AdminInventory from './pages/admin/Inventory'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminExpenses from './pages/admin/Expenses'
+import AdminCalculator from './pages/admin/Calculator'
 import AdminNewOrder from './pages/admin/NewOrder'
 import PublicOrderForm from './pages/PublicOrderForm'
 
@@ -270,6 +271,14 @@ function AppContent() {
         element={
           <AdminLayout>
             <AdminExpenses />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/calculator"
+        element={
+          <AdminLayout>
+            <AdminCalculator />
           </AdminLayout>
         }
       />

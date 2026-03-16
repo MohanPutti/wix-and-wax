@@ -109,11 +109,6 @@ npm run dev
 - Customer Storefront: http://localhost:5173
 - Admin Panel: http://localhost:5173/admin
 
-## Default Credentials
-
-After seeding:
-- **Email:** admin@wixandwax.com
-- **Password:** admin123
 
 ## Features
 

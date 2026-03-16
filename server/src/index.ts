@@ -129,6 +129,50 @@ app.use('/api', setupCartModule({
   defaultCurrency: 'INR',
 }))
 
+// Monthly order stats for Reports page — must be before setupOrderModule
+app.get('/api/orders/monthly', requireAuth, async (_req, res) => {
+  try {
+    const now = new Date()
+    const months: {
+      key: string; label: string; count: number
+      total: number; received: number; pending: number
+    }[] = []
+
+    for (let i = 11; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const end   = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+      const key   = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
+      const label = start.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+
+      const orders = await prisma.order.findMany({
+        where: { createdAt: { gte: start, lt: end }, deletedAt: null },
+        select: { total: true, paymentStatus: true, metadata: true },
+      })
+
+      let total = 0, received = 0, pending = 0
+      for (const o of orders) {
+        const amt = Number(o.total) || 0
+        const amountPaid = Number((o.metadata as Record<string, unknown>)?.amountPaid) || 0
+        total += amt
+        if (o.paymentStatus === 'paid') {
+          received += amt
+        } else if (o.paymentStatus === 'partially_paid') {
+          received += amountPaid
+          pending  += Math.max(0, amt - amountPaid)
+        } else {
+          pending += amt
+        }
+      }
+
+      months.push({ key, label, count: orders.length, total, received, pending })
+    }
+
+    res.json({ success: true, data: months })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch monthly orders' })
+  }
+})
+
 // Must be registered before setupOrderModule so 'metrics' isn't treated as an order ID
 app.get('/api/orders/metrics', requireAuth, async (req, res) => {
   try {

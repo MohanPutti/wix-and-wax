@@ -11,6 +11,7 @@ import {
   ArchiveBoxIcon,
   BanknotesIcon,
   CalculatorIcon,
+  ChartBarIcon,
 } from '@heroicons/react/24/outline'
 import { useAppSelector } from '../../store/hooks'
 import { selectIsAdmin, selectIsLoading } from '../../store/slices/authSlice'
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Orders', href: '/admin/orders', icon: ClipboardDocumentListIcon },
   { name: 'Expenses', href: '/admin/expenses', icon: BanknotesIcon },
   { name: 'Calculator', href: '/admin/calculator', icon: CalculatorIcon },
+  { name: 'Reports', href: '/admin/reports', icon: ChartBarIcon },
 ]
 
 export default function AdminLayout({ children }: AdminLayoutProps) {

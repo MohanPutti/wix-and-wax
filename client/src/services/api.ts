@@ -708,9 +708,6 @@ class ApiClient {
     })
   }
 
-  async deleteExpenseType(id: string) {
-    return this.request<ApiResponse<{ id: string }>>(`/expenses/types/${id}`, { method: 'DELETE' })
-  }
 
   async getExpenses() {
     return this.request<ApiResponse<Expense[]>>('/expenses')

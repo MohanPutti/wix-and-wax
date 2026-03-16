@@ -930,15 +930,6 @@ app.post('/api/expenses/types', requireAuth, async (req, res) => {
   }
 })
 
-app.delete('/api/expenses/types/:id', requireAuth, async (req, res) => {
-  try {
-    await prisma.expenseType.delete({ where: { id: req.params.id } })
-    res.json({ success: true, data: { id: req.params.id } })
-  } catch {
-    res.status(500).json({ success: false, error: 'Failed to delete expense type' })
-  }
-})
-
 app.get('/api/expenses', requireAuth, async (_req, res) => {
   try {
     const expenses = await prisma.expense.findMany({

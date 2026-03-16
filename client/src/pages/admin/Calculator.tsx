@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import { api } from '../../services/api'
 import Spinner from '../../components/ui/Spinner'
+import Slider from '../../components/ui/Slider'
+import InventoryPicker from '../../components/ui/InventoryPicker'
 import type { InventoryCategory, InventoryType, InventoryEntry } from '../../types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -27,99 +29,6 @@ const DEFAULT_CONFIG: Config = {
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(n)
-
-function loadConfig(): Config {
-  try {
-    const saved = localStorage.getItem('candle-calculator-config')
-    if (saved) return { ...DEFAULT_CONFIG, ...JSON.parse(saved) }
-  } catch {}
-  return DEFAULT_CONFIG
-}
-
-// ─── Slider ───────────────────────────────────────────────────────────────────
-
-function Slider({ label, value, min, max, step, onChange, format }: {
-  label: string; value: number; min: number; max: number; step: number
-  onChange: (v: number) => void; format: (v: number) => string
-}) {
-  return (
-    <div>
-      <div className="flex justify-between items-center mb-1">
-        <label className="text-sm font-medium text-warm-700">{label}</label>
-        <span className="text-sm font-bold text-amber-600">{format(value)}</span>
-      </div>
-      <input
-        type="range" min={min} max={max} step={step} value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full h-2 bg-warm-200 rounded-lg appearance-none cursor-pointer accent-amber-500"
-      />
-      <div className="flex justify-between text-xs text-warm-400 mt-1">
-        <span>{format(min)}</span><span>{format(max)}</span>
-      </div>
-    </div>
-  )
-}
-
-// ─── Inventory Picker ─────────────────────────────────────────────────────────
-
-function InventoryPicker({ label, categories, types, entries, selectedCategoryId, selectedTypeId, onCategoryChange, onTypeChange }: {
-  label: string
-  categories: InventoryCategory[]
-  types: InventoryType[]
-  entries: InventoryEntry[]
-  selectedCategoryId: string
-  selectedTypeId: string
-  onCategoryChange: (id: string) => void
-  onTypeChange: (id: string) => void
-}) {
-  const filteredTypes = types.filter((t) => t.categoryId === selectedCategoryId)
-  const latestEntry = entries
-    .filter((e) => e.typeId === selectedTypeId)
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0]
-
-  return (
-    <div className="space-y-3">
-      <div>
-        <label className="block text-sm font-medium text-warm-700 mb-1">{label} — Category</label>
-        <select
-          value={selectedCategoryId}
-          onChange={(e) => { onCategoryChange(e.target.value); onTypeChange('') }}
-          className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm bg-white text-warm-900"
-        >
-          <option value="">Select category...</option>
-          {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-      </div>
-      {selectedCategoryId && (
-        <div>
-          <label className="block text-sm font-medium text-warm-700 mb-1">{label} — Type</label>
-          {filteredTypes.length === 0 ? (
-            <p className="text-xs text-warm-400 py-2">No types in this category</p>
-          ) : (
-            <select
-              value={selectedTypeId}
-              onChange={(e) => onTypeChange(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm bg-white text-warm-900"
-            >
-              <option value="">Select type...</option>
-              {filteredTypes.map((t) => (
-                <option key={t.id} value={t.id}>{t.name}{t.unit ? ` (${t.unit})` : ''}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      )}
-      {selectedTypeId && (
-        <div className="text-xs rounded-lg px-3 py-2 bg-warm-50 border border-warm-200">
-          {latestEntry
-            ? <span className="text-warm-700">Last price: <strong className="text-warm-900">{fmt(latestEntry.pricePerUnit)}</strong> / unit</span>
-            : <span className="text-amber-600">No price data — add an inventory entry first</span>
-          }
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ─── Cost Row ─────────────────────────────────────────────────────────────────
 
@@ -155,7 +64,7 @@ function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) =>
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function AdminCalculator() {
-  const [config, setConfig] = useState<Config>(loadConfig)
+  const [config, setConfig] = useState<Config>(DEFAULT_CONFIG)
   const [showConfig, setShowConfig] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -189,13 +98,8 @@ export default function AdminCalculator() {
       .finally(() => setIsLoading(false))
   }, [])
 
-  useEffect(() => {
-    localStorage.setItem('candle-calculator-config', JSON.stringify(config))
-  }, [config])
-
   // ─── Derived ─────────────────────────────────────────────────────────────────
 
-  // Packaging category id — exclude from container picker
   const packagingCatId = categories.find((c) => c.name.toLowerCase() === 'packaging')?.id ?? ''
   const containerCategories = categories.filter((c) => c.id !== packagingCatId)
   const packagingCategories = categories.filter((c) => c.id === packagingCatId)
@@ -209,10 +113,8 @@ export default function AdminCalculator() {
   }
 
   // ─── Calculations ─────────────────────────────────────────────────────────────
-  // Wax: price per kg → ₹/gram = price_per_kg / 1000
   const waxCost = weight * (config.waxPrices[waxType] / 1000)
 
-  // Fragrance: price per 100ml → used ml = (pct/100) × weight_g ≈ grams; cost = used_ml/100 × price
   const fragranceGrams = (fragrancePct / 100) * weight
   const fragranceCost  = (fragranceGrams / 100) * config.fragrancePricePer100ml
 
@@ -227,16 +129,13 @@ export default function AdminCalculator() {
     (includeContainer && containerCost === null) ||
     (includePackaging && packagingCost === null)
 
-  // Base = only what gets marked up (container, wax, fragrance, colour, wick)
   const baseCost = hasMissingPrice ? null :
     (containerCost ?? 0) + waxCost + fragranceCost + colourCost + wickCostVal
 
-  // Selling price = (base × multiplier) + labour + packaging — both added at cost after markup
   const sellingPrice = baseCost !== null
     ? baseCost * multiplier + labourCost + (packagingCost ?? 0)
     : null
 
-  // Total you actually spend
   const totalCost = baseCost !== null
     ? baseCost + labourCost + (packagingCost ?? 0)
     : null
@@ -302,7 +201,7 @@ export default function AdminCalculator() {
                   className="w-full px-3 py-2 rounded-lg border border-warm-200 focus:outline-none focus:ring-2 focus:ring-amber-500 text-sm" />
               </div>
             </div>
-            <p className="text-xs text-warm-400 mt-4">Prices are saved automatically in your browser.</p>
+            <p className="text-xs text-warm-400 mt-4">Prices reset on page reload. Adjust before each session.</p>
           </div>
         )}
       </div>
@@ -426,7 +325,6 @@ export default function AdminCalculator() {
               Base × multiplier, then labour &amp; packaging added at cost.
             </p>
 
-            {/* Items subject to markup */}
             {includeContainer && (
               <CostRow label="Container" value={containerCost as number | null}
                 sub={containerTypeId ? types.find((t) => t.id === containerTypeId)?.name : undefined} />
@@ -441,7 +339,6 @@ export default function AdminCalculator() {
 
             <CostRow label={`Base Cost × ${multiplier}`} value={baseCost} highlight />
 
-            {/* Items added at cost after markup */}
             {(labourCost > 0 || includePackaging) && (
               <div className="mt-3 space-y-0">
                 <p className="text-xs text-warm-400 mb-1 pt-1">Added at cost (no markup)</p>

@@ -30,6 +30,7 @@ import AdminInventory from './pages/admin/Inventory'
 import AdminDashboard from './pages/admin/Dashboard'
 import AdminExpenses from './pages/admin/Expenses'
 import AdminCalculator from './pages/admin/Calculator'
+import AdminData from './pages/admin/Data'
 import AdminNewOrder from './pages/admin/NewOrder'
 import PublicOrderForm from './pages/PublicOrderForm'
 
@@ -279,6 +280,14 @@ function AppContent() {
         element={
           <AdminLayout>
             <AdminCalculator />
+          </AdminLayout>
+        }
+      />
+      <Route
+        path="/admin/reports"
+        element={
+          <AdminLayout>
+            <AdminData />
           </AdminLayout>
         }
       />

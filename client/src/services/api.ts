@@ -522,6 +522,10 @@ class ApiClient {
     })
   }
 
+  async getMonthlyOrders() {
+    return this.request<ApiResponse<{ key: string; label: string; count: number; total: number; received: number; pending: number }[]>>('/orders/monthly')
+  }
+
   async getOrderMetrics(params?: { status?: string; paymentStatus?: string; search?: string }) {
     const searchParams = new URLSearchParams()
     if (params) {

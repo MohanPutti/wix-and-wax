@@ -19,6 +19,8 @@ import type {
   InventoryType,
   InventoryEntry,
   InventorySummary,
+  ExpenseType,
+  Expense,
 } from '../types'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api'
@@ -692,6 +694,41 @@ class ApiClient {
     return this.request<ApiResponse<{ rate: number; isEstimate: boolean }>>(
       `/shipping/rates?pincode=${pincode}&items=${items}`
     )
+  }
+
+  // Expense endpoints
+  async getExpenseTypes() {
+    return this.request<ApiResponse<ExpenseType[]>>('/expenses/types')
+  }
+
+  async createExpenseType(name: string) {
+    return this.request<ApiResponse<ExpenseType>>('/expenses/types', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    })
+  }
+
+
+  async getExpenses() {
+    return this.request<ApiResponse<Expense[]>>('/expenses')
+  }
+
+  async createExpense(data: { name: string; amount: number; typeId: string; date: string; note?: string }) {
+    return this.request<ApiResponse<Expense>>('/expenses', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async updateExpense(id: string, data: { name: string; amount: number; typeId: string; date: string; note?: string }) {
+    return this.request<ApiResponse<Expense>>(`/expenses/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    })
+  }
+
+  async deleteExpense(id: string) {
+    return this.request<ApiResponse<{ id: string }>>(`/expenses/${id}`, { method: 'DELETE' })
   }
 }
 

@@ -259,6 +259,25 @@ export interface InventorySummary {
   currentValue: number
 }
 
+// Expense types
+export interface ExpenseType {
+  id: string
+  name: string
+  createdAt: string
+}
+
+export interface Expense {
+  id: string
+  name: string
+  amount: number
+  typeId: string
+  date: string
+  note?: string
+  createdAt: string
+  updatedAt: string
+  type: Pick<ExpenseType, 'id' | 'name'>
+}
+
 // Admin Dashboard types
 export interface DashboardStats {
   totalOrders: number

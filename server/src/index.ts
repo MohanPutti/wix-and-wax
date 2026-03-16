@@ -907,6 +907,81 @@ app.get('/api/inventory/summary', async (_req, res) => {
   }
 })
 
+// ============================================================
+// EXPENSE MANAGEMENT
+// ============================================================
+
+app.get('/api/expenses/types', requireAuth, async (_req, res) => {
+  try {
+    const types = await prisma.expenseType.findMany({ orderBy: { name: 'asc' } })
+    res.json({ success: true, data: types })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch expense types' })
+  }
+})
+
+app.post('/api/expenses/types', requireAuth, async (req, res) => {
+  try {
+    const { name } = req.body as { name: string }
+    const type = await prisma.expenseType.create({ data: { id: uuidv4(), name: name.trim() } })
+    res.json({ success: true, data: type })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create expense type' })
+  }
+})
+
+app.get('/api/expenses', requireAuth, async (_req, res) => {
+  try {
+    const expenses = await prisma.expense.findMany({
+      orderBy: { date: 'desc' },
+      include: { type: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: expenses })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch expenses' })
+  }
+})
+
+app.post('/api/expenses', requireAuth, async (req, res) => {
+  try {
+    const { name, amount, typeId, date, note } = req.body as {
+      name: string; amount: number; typeId: string; date: string; note?: string
+    }
+    const expense = await prisma.expense.create({
+      data: { id: uuidv4(), name: name.trim(), amount, typeId, date: new Date(date), note: note?.trim() || null },
+      include: { type: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: expense })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to create expense' })
+  }
+})
+
+app.put('/api/expenses/:id', requireAuth, async (req, res) => {
+  try {
+    const { name, amount, typeId, date, note } = req.body as {
+      name: string; amount: number; typeId: string; date: string; note?: string
+    }
+    const expense = await prisma.expense.update({
+      where: { id: req.params.id },
+      data: { name: name.trim(), amount, typeId, date: new Date(date), note: note?.trim() || null },
+      include: { type: { select: { id: true, name: true } } },
+    })
+    res.json({ success: true, data: expense })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to update expense' })
+  }
+})
+
+app.delete('/api/expenses/:id', requireAuth, async (req, res) => {
+  try {
+    await prisma.expense.delete({ where: { id: req.params.id } })
+    res.json({ success: true, data: { id: req.params.id } })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to delete expense' })
+  }
+})
+
 // Sync product images directly via Prisma (bypasses core URL validation)
 app.put('/api/products/:id/images/sync', requireAuth, async (req, res) => {
   try {

@@ -224,23 +224,23 @@ export default function AdminData() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [expRes, typeRes, ordRes, metricsRes, productsRes, ordersRes] = await Promise.all([
+        const [expRes, typeRes, ordRes, metricsRes, productsRes, processingRes] = await Promise.all([
           api.getExpenses(),
           api.getExpenseTypes(),
           api.getMonthlyOrders(),
           api.getOrderMetrics(),
           api.getProducts({ limit: 1 }),
-          api.getOrders({ limit: 100, status: 'pending' }),
+          api.getOrderMetrics({ status: 'processing' }),
         ])
         if (expRes.success) setExpenses(expRes.data)
         if (typeRes.success && typeRes.data.length > 0) setExpenseTypes(typeRes.data)
         if (ordRes.success) setOrderData(ordRes.data)
         if (metricsRes.success) {
-          setTotalRevenue(metricsRes.data.totalPaid)
+          setTotalRevenue(metricsRes.data.totalPaid + metricsRes.data.totalPending)
           setTotalOrders(metricsRes.data.count)
         }
         if (productsRes.success) setTotalProducts(productsRes.meta.total)
-        if (ordersRes.success) setPendingOrders(ordersRes.meta.total)
+        if (processingRes.success) setPendingOrders(processingRes.data.count)
       } catch (err) {
         setError('Failed to load reports data. Please check your connection.')
         console.error(err)
@@ -285,7 +285,7 @@ export default function AdminData() {
           <p className="font-serif text-2xl font-bold text-warm-900">{totalOrders}</p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-soft">
-          <p className="text-warm-500 text-sm mb-1">Pending Orders</p>
+          <p className="text-warm-500 text-sm mb-1">Processing Orders</p>
           <p className="font-serif text-2xl font-bold text-amber-600">{pendingOrders}</p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-soft">

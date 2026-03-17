@@ -19,9 +19,11 @@ export default function AdminDashboard() {
   const { products, isLoading: productsLoading } = useProducts({ limit: 100 })
   const { orders, isLoading: ordersLoading } = useOrders({ limit: 5 })
   const [metrics, setMetrics] = useState<{ count: number; totalPaid: number; totalPending: number; avgOrderValue: number } | null>(null)
+  const [processingCount, setProcessingCount] = useState(0)
 
   useEffect(() => {
     api.getOrderMetrics().then((res: { success: boolean; data: typeof metrics }) => { if (res.success) setMetrics(res.data) })
+    api.getOrderMetrics({ status: 'processing' }).then((res: { success: boolean; data: { count: number } }) => { if (res.success) setProcessingCount(res.data.count) })
   }, [])
 
   const isLoading = productsLoading || ordersLoading
@@ -37,7 +39,6 @@ export default function AdminDashboard() {
   const totalProducts = products.length
   const totalOrders = metrics?.count ?? 0
   const totalRevenue = (metrics?.totalPaid ?? 0) + (metrics?.totalPending ?? 0)
-  const pendingOrders = orders.filter((o) => o.status === 'pending').length
   const recentOrders = orders.slice(0, 5)
 
   return (
@@ -55,8 +56,8 @@ export default function AdminDashboard() {
           <p className="font-serif text-3xl font-bold text-warm-900">{totalOrders}</p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-soft">
-          <p className="text-warm-500 text-sm mb-1">Pending Orders</p>
-          <p className="font-serif text-3xl font-bold text-amber-600">{pendingOrders}</p>
+          <p className="text-warm-500 text-sm mb-1">Processing Orders</p>
+          <p className="font-serif text-3xl font-bold text-amber-600">{processingCount}</p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <p className="text-warm-500 text-sm mb-1">Total Products</p>

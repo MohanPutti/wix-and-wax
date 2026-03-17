@@ -315,8 +315,9 @@ export default function PublicOrderForm() {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-warm-600 mb-1">Qty</label>
-                        <input type="number" min="1" value={item.quantity}
-                          onChange={e => updateItem(item.key, { quantity: Math.max(1, Number(e.target.value)) })}
+                        <input type="number" min="1" value={item.quantity || ''}
+                          onChange={e => updateItem(item.key, { quantity: Number(e.target.value) })}
+                          onBlur={e => { const v = Number(e.target.value); if (!v || v < 1) updateItem(item.key, { quantity: 1 }) }}
                           className="w-full border border-warm-200 rounded-lg px-3 py-2 text-sm text-warm-900 focus:outline-none focus:ring-1 focus:ring-amber-400" />
                       </div>
                     </div>

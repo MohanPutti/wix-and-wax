@@ -291,8 +291,9 @@ export default function AdminNewOrder() {
                       label="Qty"
                       type="number"
                       min="1"
-                      value={String(item.quantity)}
-                      onChange={e => updateItem(item.key, { quantity: Math.max(1, Number(e.target.value)) })}
+                      value={item.quantity || ''}
+                      onChange={e => updateItem(item.key, { quantity: Number(e.target.value) })}
+                      onBlur={e => { const v = Number(e.target.value); if (!v || v < 1) updateItem(item.key, { quantity: 1 }) }}
                       required
                     />
                   </div>

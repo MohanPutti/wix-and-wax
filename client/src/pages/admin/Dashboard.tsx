@@ -39,7 +39,6 @@ export default function AdminDashboard() {
   const totalProducts = products.length
   const totalOrders = metrics?.count ?? 0
   const totalRevenue = (metrics?.totalPaid ?? 0) + (metrics?.totalPending ?? 0)
-  const pendingOrders = processingCount
   const recentOrders = orders.slice(0, 5)
 
   return (
@@ -58,7 +57,7 @@ export default function AdminDashboard() {
         </div>
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <p className="text-warm-500 text-sm mb-1">Processing Orders</p>
-          <p className="font-serif text-3xl font-bold text-amber-600">{pendingOrders}</p>
+          <p className="font-serif text-3xl font-bold text-amber-600">{processingCount}</p>
         </div>
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <p className="text-warm-500 text-sm mb-1">Total Products</p>

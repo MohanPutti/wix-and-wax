@@ -176,11 +176,15 @@ app.get('/api/orders/monthly', requireAuth, async (_req, res) => {
 // Must be registered before setupOrderModule so 'metrics' isn't treated as an order ID
 app.get('/api/orders/metrics', requireAuth, async (req, res) => {
   try {
-    const { status, paymentStatus, search } = req.query as Record<string, string>
+    const { status, paymentStatus, search, month } = req.query as Record<string, string>
     const where: Record<string, unknown> = { deletedAt: null }
     if (status) where.status = status
     if (paymentStatus) where.paymentStatus = paymentStatus
     if (search) where.OR = [{ orderNumber: { contains: search } }, { email: { contains: search } }]
+    if (month) {
+      const [y, m] = month.split('-').map(Number)
+      where.createdAt = { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) }
+    }
 
     const orders = await prisma.order.findMany({ where, select: { total: true, paymentStatus: true, metadata: true } })
 
@@ -197,6 +201,50 @@ app.get('/api/orders/metrics', requireAuth, async (req, res) => {
     res.json({ success: true, data: { count, totalPaid, totalPending, avgOrderValue } })
   } catch {
     res.status(500).json({ success: false, error: 'Failed to fetch metrics' })
+  }
+})
+
+// Month-filtered orders list — must be before setupOrderModule
+app.get('/api/orders', requireAuth, async (req, res, next) => {
+  const { month } = req.query as Record<string, string>
+  if (!month) return next()
+  try {
+    const { status, paymentStatus, search, page: pageStr, limit: limitStr } = req.query as Record<string, string>
+    const page = Math.max(1, parseInt(pageStr) || 1)
+    const limit = Math.min(100, Math.max(1, parseInt(limitStr) || 50))
+    const [y, m] = month.split('-').map(Number)
+    const where: Record<string, unknown> = {
+      deletedAt: null,
+      createdAt: { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) },
+    }
+    if (status) where.status = status
+    if (paymentStatus) where.paymentStatus = paymentStatus
+    if (search) where.OR = [{ orderNumber: { contains: search } }, { email: { contains: search } }]
+
+    const [total, orders] = await Promise.all([
+      prisma.order.count({ where }),
+      prisma.order.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { items: true },
+      }),
+    ])
+
+    const data = orders.map((o) => ({
+      ...o,
+      shippingAddress: typeof o.shippingAddress === 'string' ? JSON.parse(o.shippingAddress as string) : o.shippingAddress,
+      billingAddress: o.billingAddress ? (typeof o.billingAddress === 'string' ? JSON.parse(o.billingAddress as string) : o.billingAddress) : undefined,
+    }))
+
+    res.json({
+      success: true,
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    })
+  } catch {
+    res.status(500).json({ success: false, error: 'Failed to fetch orders' })
   }
 })
 

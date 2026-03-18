@@ -29,10 +29,24 @@ const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'd
 const fmtCurrency = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 
+function buildMonthOptions() {
+  const options: { value: string; label: string }[] = [{ value: '', label: 'All Time' }]
+  const now = new Date()
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    options.push({ value, label })
+  }
+  return options
+}
+const MONTH_OPTIONS = buildMonthOptions()
+
 export function AdminOrderList() {
   const navigate = useNavigate()
   const [statusFilter, setStatusFilter] = useState('')
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('')
+  const [monthFilter, setMonthFilter] = useState('')
   const [searchInput, setSearchInput] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [page, setPage] = useState(1)
@@ -43,20 +57,22 @@ export function AdminOrderList() {
     return () => clearTimeout(timer)
   }, [searchInput])
 
-  useEffect(() => { setPage(1) }, [statusFilter, paymentStatusFilter])
+  useEffect(() => { setPage(1) }, [statusFilter, paymentStatusFilter, monthFilter])
 
   useEffect(() => {
     api.getOrderMetrics({
       status: statusFilter || undefined,
       paymentStatus: paymentStatusFilter || undefined,
       search: debouncedSearch || undefined,
+      month: monthFilter || undefined,
     }).then(res => { if (res.success) setMetrics(res.data) })
-  }, [statusFilter, paymentStatusFilter, debouncedSearch])
+  }, [statusFilter, paymentStatusFilter, debouncedSearch, monthFilter])
 
   const { orders, isLoading, pagination } = useOrders({
     status: statusFilter || undefined,
     paymentStatus: paymentStatusFilter || undefined,
     search: debouncedSearch || undefined,
+    month: monthFilter || undefined,
     page,
     limit: 50,
   })
@@ -86,7 +102,7 @@ export function AdminOrderList() {
       {metrics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           <div className="bg-white rounded-xl p-4 shadow-soft">
-            <p className="text-xs text-warm-500 mb-1">Total Orders</p>
+            <p className="text-xs text-warm-500 mb-1">{monthFilter ? 'Orders This Month' : 'Total Orders'}</p>
             <p className="text-2xl font-semibold text-warm-900">{metrics.count.toLocaleString('en-IN')}</p>
           </div>
           <div className="bg-white rounded-xl p-4 shadow-soft">
@@ -106,12 +122,19 @@ export function AdminOrderList() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl p-4 shadow-soft mb-6">
-        <div className="flex gap-4 flex-col sm:flex-row">
+        <div className="flex gap-4 flex-col sm:flex-row flex-wrap">
           <div className="flex-[2] min-w-0">
             <Input
               placeholder="Search by order # or email..."
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+          <div className="w-44 shrink-0">
+            <Select
+              value={monthFilter}
+              onChange={(e) => setMonthFilter(e.target.value)}
+              options={MONTH_OPTIONS}
             />
           </div>
           <div className="w-40 shrink-0">
@@ -581,7 +604,7 @@ export function AdminOrderDetail() {
                       <Input label="Variant (optional)" value={item.variantName} onChange={e => updateEditItem(item.key, { variantName: e.target.value })} />
                     </div>
                     <div className="col-span-2">
-                      <Input label="Qty" type="number" min="1" value={String(item.quantity)} onChange={e => updateEditItem(item.key, { quantity: Math.max(1, Number(e.target.value)) })} />
+                      <Input label="Qty" type="number" min="1" value={item.quantity || ''} onChange={e => updateEditItem(item.key, { quantity: Number(e.target.value) })} onBlur={e => { const v = Number(e.target.value); if (!v || v < 1) updateEditItem(item.key, { quantity: 1 }) }} />
                     </div>
                     <div className="col-span-2">
                       <Input label="Price (₹)" type="number" min="0" step="0.01" value={item.price} onChange={e => updateEditItem(item.key, { price: e.target.value })} />

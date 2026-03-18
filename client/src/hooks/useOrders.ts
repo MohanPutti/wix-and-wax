@@ -8,6 +8,7 @@ interface UseOrdersParams {
   status?: string
   paymentStatus?: string
   search?: string
+  month?: string
   enabled?: boolean
 }
 

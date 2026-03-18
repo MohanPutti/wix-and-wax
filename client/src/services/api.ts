@@ -526,7 +526,7 @@ class ApiClient {
     return this.request<ApiResponse<{ key: string; label: string; count: number; total: number; received: number; pending: number }[]>>('/orders/monthly')
   }
 
-  async getOrderMetrics(params?: { status?: string; paymentStatus?: string; search?: string }) {
+  async getOrderMetrics(params?: { status?: string; paymentStatus?: string; search?: string; month?: string }) {
     const searchParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -539,7 +539,7 @@ class ApiClient {
     )
   }
 
-  async getOrders(params?: { page?: number; limit?: number; status?: string; paymentStatus?: string; search?: string }) {
+  async getOrders(params?: { page?: number; limit?: number; status?: string; paymentStatus?: string; search?: string; month?: string }) {
     const searchParams = new URLSearchParams()
     if (params) {
       Object.entries(params).forEach(([key, value]) => {

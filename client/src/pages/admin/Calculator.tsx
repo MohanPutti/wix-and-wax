@@ -154,7 +154,7 @@ export default function AdminCalculator() {
   return (
     <div className="max-w-5xl">
       <div className="mb-8">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">Candle Cost Calculator</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">Candle Cost Calculator</h1>
         <p className="text-warm-500 text-sm mt-1">Calculate production cost and ideal selling price for a candle</p>
       </div>
 
@@ -206,7 +206,7 @@ export default function AdminCalculator() {
         )}
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* ── Left: Inputs ── */}
         <div className="space-y-4">
 
@@ -401,7 +401,7 @@ export default function AdminCalculator() {
 
                 <div>
                   <p className="text-xs text-warm-400 mb-2">Quick select</p>
-                  <div className="grid grid-cols-5 gap-2">
+                  <div className="grid grid-cols-5 sm:grid-cols-5 gap-2">
                     {[1.5, 2, 2.5, 3, 4].map((m) => (
                       <button key={m} onClick={() => setMultiplier(m)}
                         className={`py-1.5 rounded-lg text-sm font-medium transition-colors ${multiplier === m ? 'bg-amber-500 text-white' : 'bg-warm-100 text-warm-700 hover:bg-warm-200'}`}>

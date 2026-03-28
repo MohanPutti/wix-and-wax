@@ -31,7 +31,7 @@ function RevenueRatioCards({
   ]
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
       {cards.map(({ label, names, color }) => {
         const spent = typeTotal(names)
         const pct = totalRevenue > 0 ? (spent / totalRevenue) * 100 : 0
@@ -98,8 +98,8 @@ function ExpenseTrendChart({ expenses, types }: { expenses: Expense[]; types: Ex
           No expense data yet
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={240}>
+          <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f5f0eb" />
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={{ stroke: '#e8e0d5' }} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={false} tickLine={false}
@@ -134,8 +134,8 @@ function OrdersChart({ data }: { data: { label: string; count: number; total: nu
           No order data yet
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={240}>
+          <ComposedChart data={data} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f5f0eb" />
             <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={{ stroke: '#e8e0d5' }} tickLine={false} />
             <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={false} tickLine={false}
@@ -188,8 +188,8 @@ function RevenueVsExpensesChart({
           No data yet
         </div>
       ) : (
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={chartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={240}>
+          <ComposedChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f5f0eb" />
             <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={{ stroke: '#e8e0d5' }} tickLine={false} />
             <YAxis tick={{ fontSize: 11, fill: '#9c8c7a' }} axisLine={false} tickLine={false}
@@ -271,7 +271,7 @@ export default function AdminData() {
     <div>
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">Reports</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">Reports</h1>
       </div>
 
       {/* Top stat cards */}

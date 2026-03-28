@@ -58,11 +58,12 @@ export function AdminProductList() {
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">Products</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">Products</h1>
         <Link to="/admin/products/new">
           <Button>
             <PlusIcon className="h-5 w-5 mr-2" />
-            Add Product
+            <span className="hidden sm:inline">Add Product</span>
+            <span className="sm:hidden">Add</span>
           </Button>
         </Link>
       </div>
@@ -78,7 +79,8 @@ export function AdminProductList() {
 
       {/* Products Table */}
       <div className="bg-white rounded-xl shadow-soft overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[520px]">
           <thead className="bg-warm-50 border-b border-warm-200">
             <tr>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Product</th>
@@ -152,6 +154,7 @@ export function AdminProductList() {
             <p className="text-warm-500">No products found</p>
           </div>
         )}
+        </div>
       </div>
 
       {/* Pagination */}

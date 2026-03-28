@@ -72,13 +72,14 @@ export function AdminOrderList() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">Orders</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">Orders</h1>
         <button
           onClick={() => navigate('/admin/orders/new')}
           className="flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
         >
           <PlusIcon className="h-4 w-4" />
-          New Order
+          <span className="hidden sm:inline">New Order</span>
+          <span className="sm:hidden">New</span>
         </button>
       </div>
 
@@ -114,7 +115,7 @@ export function AdminOrderList() {
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
-          <div className="w-40 shrink-0">
+          <div className="w-full sm:w-40 shrink-0">
             <Select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
@@ -129,7 +130,7 @@ export function AdminOrderList() {
               ]}
             />
           </div>
-          <div className="w-44 shrink-0">
+          <div className="w-full sm:w-44 shrink-0">
             <Select
               value={paymentStatusFilter}
               onChange={(e) => setPaymentStatusFilter(e.target.value)}
@@ -148,7 +149,8 @@ export function AdminOrderList() {
 
       {/* Orders Table */}
       <div className="bg-white rounded-xl shadow-soft overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[640px]">
           <thead className="bg-warm-50 border-b border-warm-200">
             <tr>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Order</th>
@@ -222,10 +224,11 @@ export function AdminOrderList() {
             <p className="text-warm-500">No orders found</p>
           </div>
         )}
+        </div>
       </div>
 
       {pagination.totalPages > 1 && (
-        <div className="flex items-center justify-between mt-4 px-1">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-2 mt-4 px-1">
           <p className="text-sm text-warm-500">
             Showing {(page - 1) * 50 + 1}–{Math.min(page * 50, pagination.total)} of {pagination.total} orders
           </p>
@@ -465,7 +468,7 @@ export function AdminOrderDetail() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <button onClick={() => setIsEditing(false)} className="text-amber-600 hover:text-amber-700 text-sm mb-2 block">&larr; Cancel Edit</button>
-            <h1 className="font-serif text-3xl font-semibold text-warm-900">Edit Order #{order.orderNumber}</h1>
+            <h1 className="font-serif text-xl md:text-3xl font-semibold text-warm-900">Edit Order #{order.orderNumber}</h1>
           </div>
           <button
             onClick={handleSaveEdit}
@@ -480,7 +483,7 @@ export function AdminOrderDetail() {
           {/* Customer */}
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <h2 className="font-semibold text-warm-900 mb-4">Customer</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Input label="First Name" value={editForm.firstName} onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))} />
               <Input label="Last Name" value={editForm.lastName} onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))} />
               <Input label="Email" type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
@@ -491,11 +494,11 @@ export function AdminOrderDetail() {
           {/* Shipping Address */}
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <h2 className="font-semibold text-warm-900 mb-4">Shipping Address</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="sm:col-span-2">
                 <Input label="Address Line 1" value={editForm.address1} onChange={e => setEditForm(f => ({ ...f, address1: e.target.value }))} />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Input label="Address Line 2 (optional)" value={editForm.address2} onChange={e => setEditForm(f => ({ ...f, address2: e.target.value }))} />
               </div>
               <Input label="City" value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} />
@@ -534,7 +537,7 @@ export function AdminOrderDetail() {
                                 placeholder="Search products..."
                                 value={searchQuery}
                                 onChange={e => setSearchQuery(e.target.value)}
-                                className="pl-9 pr-3 py-1.5 text-sm border border-warm-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 w-52"
+                                className="pl-9 pr-3 py-1.5 text-sm border border-warm-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 w-40 sm:w-52"
                               />
                             </div>
                             <button type="button" onClick={() => { setSearchItemKey(null); setSearchQuery(''); setSearchResults([]) }}>
@@ -542,7 +545,7 @@ export function AdminOrderDetail() {
                             </button>
                           </div>
                           {(searchResults.length > 0 || isSearching) && (
-                            <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-warm-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
+                            <div className="absolute right-0 top-full mt-1 w-64 sm:w-80 bg-white border border-warm-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
                               {isSearching ? (
                                 <div className="p-3 text-sm text-warm-500 text-center">Searching...</div>
                               ) : searchResults.map(product => (
@@ -573,17 +576,17 @@ export function AdminOrderDetail() {
                       )}
                     </div>
                   </div>
-                  <div className="grid grid-cols-12 gap-3">
-                    <div className="col-span-5">
+                  <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
+                    <div className="col-span-2 sm:col-span-5">
                       <Input label="Product Name" value={item.productName} onChange={e => updateEditItem(item.key, { productName: e.target.value })} />
                     </div>
-                    <div className="col-span-3">
+                    <div className="col-span-2 sm:col-span-3">
                       <Input label="Variant (optional)" value={item.variantName} onChange={e => updateEditItem(item.key, { variantName: e.target.value })} />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <Input label="Qty" type="number" min="1" value={String(item.quantity)} onChange={e => updateEditItem(item.key, { quantity: Math.max(1, Number(e.target.value)) })} />
                     </div>
-                    <div className="col-span-2">
+                    <div className="col-span-1 sm:col-span-2">
                       <Input label="Price (₹)" type="number" min="0" step="0.01" value={item.price} onChange={e => updateEditItem(item.key, { price: e.target.value })} />
                     </div>
                   </div>
@@ -591,8 +594,8 @@ export function AdminOrderDetail() {
               ))}
             </div>
             <div className="mt-4 border-t border-warm-100 pt-4">
-              <div className="flex items-end justify-between gap-4">
-                <div className="w-48">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+                <div className="w-full sm:w-48">
                   <Input label="Shipping Cost (₹)" type="number" min="0" step="0.01" value={editForm.shippingCost} onChange={e => setEditForm(f => ({ ...f, shippingCost: e.target.value }))} />
                 </div>
                 <div className="text-right space-y-1">
@@ -607,7 +610,7 @@ export function AdminOrderDetail() {
           {/* Order Details */}
           <div className="bg-white rounded-xl p-6 shadow-soft">
             <h2 className="font-semibold text-warm-900 mb-4">Order Details</h2>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Select label="Order Status" value={editForm.status} onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
                 options={[
                   { value: 'pending', label: 'Pending' },
@@ -644,7 +647,7 @@ export function AdminOrderDetail() {
                   </>
                 )
               })()}
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <label className="block text-sm font-medium text-warm-700 mb-1">Notes <span className="text-warm-400 font-normal">(optional)</span></label>
                 <textarea rows={3} value={editForm.notes} onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
                   className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none" />
@@ -658,16 +661,16 @@ export function AdminOrderDetail() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div>
           <Link to="/admin/orders" className="text-amber-600 hover:text-amber-700 text-sm mb-2 inline-block">
             &larr; Back to Orders
           </Link>
-          <h1 className="font-serif text-3xl font-semibold text-warm-900">
+          <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">
             Order #{order.orderNumber}
           </h1>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center flex-wrap gap-2">
           <Badge variant={statusColors[order.status]} size="md">{order.status}</Badge>
           <Badge variant={paymentStatusColors[order.paymentStatus]} size="md">{order.paymentStatus}</Badge>
           <button onClick={() => setIsEditing(true)} className="flex items-center gap-1 px-3 py-1.5 border border-warm-200 text-warm-600 text-sm rounded-lg hover:bg-warm-50 transition-colors">

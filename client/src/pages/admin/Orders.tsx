@@ -8,6 +8,7 @@ import Select from '../../components/ui/Select'
 import Input from '../../components/ui/Input'
 import Spinner from '../../components/ui/Spinner'
 import type { Product } from '../../types'
+import { buildMonthOptions } from '../../utils/chartHelpers'
 
 const statusColors: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
   pending: 'warning',
@@ -29,17 +30,6 @@ const paymentStatusColors: Record<string, 'default' | 'success' | 'warning' | 'd
 const fmtCurrency = (n: number) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n)
 
-function buildMonthOptions() {
-  const options: { value: string; label: string }[] = [{ value: '', label: 'All Time' }]
-  const now = new Date()
-  for (let i = 0; i < 24; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
-    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
-    options.push({ value, label })
-  }
-  return options
-}
 const MONTH_OPTIONS = buildMonthOptions()
 
 export function AdminOrderList() {

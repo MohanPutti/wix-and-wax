@@ -20,3 +20,15 @@ export function monthLabel(key: string) {
   const [y, m] = key.split('-')
   return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
 }
+
+export function buildMonthOptions(count = 24): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [{ value: '', label: 'All Time' }]
+  const now = new Date()
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+    const label = d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })
+    options.push({ value, label })
+  }
+  return options
+}

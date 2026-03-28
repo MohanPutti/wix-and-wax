@@ -7,7 +7,7 @@ import multer from 'multer'
 import { v4 as uuidv4 } from 'uuid'
 import { config } from './config.js'
 
-// Import core modules from submodule (using source TypeScript via tsx)
+// Import core modules from submodule compiled dist (CJS, compatible with Node 25 ESM interop)
 import {
   setupUserModule,
   setupProductModule,
@@ -18,10 +18,10 @@ import {
   createUserService,
   createCartService,
   createNotificationService,
-} from '../../core/src/index.js'
-import { createRazorpayAdapter } from '../../core/src/modules/payments/adapters/razorpay.js'
-import { createPhonePeAdapter } from '../../core/src/modules/payments/adapters/phonepe.js'
-import { createSMTPAdapter, gmailConfig } from '../../core/src/modules/notifications/adapters/smtp.js'
+} from '../../core/dist/index.js'
+import { createRazorpayAdapter } from '../../core/dist/modules/payments/adapters/razorpay.js'
+import { createPhonePeAdapter } from '../../core/dist/modules/payments/adapters/phonepe.js'
+import { createSMTPAdapter, gmailConfig } from '../../core/dist/modules/notifications/adapters/smtp.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)

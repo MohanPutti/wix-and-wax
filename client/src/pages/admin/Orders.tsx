@@ -151,8 +151,8 @@ export function AdminOrderList() {
         <table className="w-full">
           <thead className="bg-warm-50 border-b border-warm-200">
             <tr>
-              <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Order</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Customer</th>
+              <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Items</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Status</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Payment</th>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Total</th>
@@ -164,13 +164,25 @@ export function AdminOrderList() {
             {orders.map((order) => (
               <tr key={order.id} className="border-b border-warm-100 hover:bg-warm-50">
                 <td className="px-6 py-4">
-                  <span className="font-medium text-warm-900">#{order.orderNumber}</span>
-                </td>
-                <td className="px-6 py-4">
                   <div>
                     <p className="text-warm-900">{order.shippingAddress.firstName} {order.shippingAddress.lastName}</p>
                     <p className="text-sm text-warm-500">{order.email}</p>
                   </div>
+                </td>
+                <td className="px-6 py-4 max-w-[180px]">
+                  {(() => {
+                    const totalQty = order.items.reduce((s, i) => s + i.quantity, 0)
+                    const firstName = order.items[0]?.productName ?? '—'
+                    const extra = order.items.length - 1
+                    return (
+                      <div>
+                        <p className="font-medium text-warm-900 text-sm truncate" title={firstName}>
+                          {firstName}{extra > 0 ? ` +${extra} more` : ''}
+                        </p>
+                        <p className="text-xs text-warm-500">{totalQty} item{totalQty !== 1 ? 's' : ''}</p>
+                      </div>
+                    )
+                  })()}
                 </td>
                 <td className="px-6 py-4">
                   <Badge variant={statusColors[order.status]}>{order.status}</Badge>
@@ -180,21 +192,32 @@ export function AdminOrderList() {
                     {order.paymentStatus}
                   </Badge>
                 </td>
-                <td className="px-6 py-4 font-medium text-warm-900">
+                <td className="px-6 py-4">
                   {(() => {
                     const total = Number(order.total)
                     const amountPaid = Number((order.metadata as Record<string, unknown>)?.amountPaid) || 0
                     const pending = total - amountPaid
                     const isPartial = order.paymentStatus === 'partially_paid' && pending > 0
+                    const isFullyPaid = order.paymentStatus === 'paid'
+                    if (isPartial) {
+                      return (
+                        <div>
+                          <p className="text-sm font-bold text-warm-900">{fmtCurrency(total)}</p>
+                          <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-xs font-medium text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
+                              ↑ {fmtCurrency(amountPaid)}
+                            </span>
+                            <span className="text-xs font-medium text-red-500 bg-red-50 px-1.5 py-0.5 rounded">
+                              ↓ {fmtCurrency(pending)}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    }
                     return (
-                      <div className={isPartial ? 'group relative cursor-default inline-block' : ''}>
-                        ₹{total.toFixed(2)}
-                        {isPartial && (
-                          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-lg bg-warm-800 px-2.5 py-1.5 text-xs text-white opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-                            Pending: ₹{pending.toFixed(2)}
-                          </span>
-                        )}
-                      </div>
+                      <p className={`text-sm font-bold ${isFullyPaid ? 'text-green-600' : 'text-warm-900'}`}>
+                        {fmtCurrency(total)}
+                      </p>
                     )
                   })()}
                 </td>

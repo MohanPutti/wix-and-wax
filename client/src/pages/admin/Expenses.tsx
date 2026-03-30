@@ -241,7 +241,7 @@ export default function AdminExpenses() {
     <div>
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">Expenses</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">Expenses</h1>
         {!isAdding && (
           <Button onClick={() => setIsAdding(true)}>
             <PlusIcon className="h-5 w-5 mr-2" />
@@ -331,7 +331,8 @@ export default function AdminExpenses() {
 
       {/* Expenses Table */}
       <div className="bg-white rounded-xl shadow-soft overflow-hidden">
-        <table className="w-full">
+        <div className="overflow-x-auto">
+        <table className="w-full min-w-[480px]">
           <thead className="bg-warm-50 border-b border-warm-200">
             <tr>
               <th className="text-left px-6 py-4 text-sm font-semibold text-warm-700">Date</th>
@@ -393,6 +394,7 @@ export default function AdminExpenses() {
             <p className="text-warm-400 text-sm">Click "Add Expense" to get started</p>
           </div>
         )}
+        </div>
       </div>
     </div>
   )

@@ -231,7 +231,7 @@ export default function AdminInventory() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">Inventory</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">Inventory</h1>
       </div>
 
       {error && (
@@ -285,7 +285,8 @@ export default function AdminInventory() {
             {stock.length === 0 ? 'No inventory types yet. Add types below to get started.' : 'No items in this category.'}
           </div>
         ) : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[500px] text-sm">
             <thead className="bg-warm-50 text-warm-600 text-xs uppercase tracking-wide">
               <tr>
                 <th className="px-6 py-3 text-left">Item</th>
@@ -381,6 +382,7 @@ export default function AdminInventory() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

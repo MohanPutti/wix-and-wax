@@ -150,7 +150,7 @@ export default function AdminNewOrder() {
   return (
     <div className="max-w-4xl">
       <div className="flex items-center justify-between mb-8">
-        <h1 className="font-serif text-3xl font-semibold text-warm-900">New Manual Order</h1>
+        <h1 className="font-serif text-2xl md:text-3xl font-semibold text-warm-900">New Manual Order</h1>
       </div>
 
       {error && (
@@ -161,7 +161,7 @@ export default function AdminNewOrder() {
         {/* Customer */}
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <h2 className="font-semibold text-warm-900 mb-4">Customer</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Input label="First Name" value={firstName} onChange={e => setFirstName(e.target.value)} required />
             <Input label="Last Name" value={lastName} onChange={e => setLastName(e.target.value)} required />
             <Input label="Email (optional)" type="email" value={email} onChange={e => setEmail(e.target.value)} />
@@ -172,11 +172,11 @@ export default function AdminNewOrder() {
         {/* Shipping Address */}
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <h2 className="font-semibold text-warm-900 mb-4">Shipping Address</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
               <Input label="Address Line 1" value={address1} onChange={e => setAddress1(e.target.value)} required />
             </div>
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <Input label="Address Line 2 (optional)" value={address2} onChange={e => setAddress2(e.target.value)} />
             </div>
             <Input label="City" value={city} onChange={e => setCity(e.target.value)} required />
@@ -217,7 +217,7 @@ export default function AdminNewOrder() {
                               placeholder="Search products..."
                               value={searchQuery}
                               onChange={e => setSearchQuery(e.target.value)}
-                              className="pl-9 pr-3 py-1.5 text-sm border border-warm-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 w-52"
+                              className="pl-9 pr-3 py-1.5 text-sm border border-warm-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500 w-40 sm:w-52"
                             />
                           </div>
                           <button type="button" onClick={() => { setSearchKey(null); setSearchQuery(''); setSearchResults([]) }}>
@@ -225,7 +225,7 @@ export default function AdminNewOrder() {
                           </button>
                         </div>
                         {(searchResults.length > 0 || isSearching) && (
-                          <div className="absolute right-0 top-full mt-1 w-80 bg-white border border-warm-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
+                          <div className="absolute right-0 top-full mt-1 w-64 sm:w-80 bg-white border border-warm-200 rounded-xl shadow-lg z-10 max-h-64 overflow-y-auto">
                             {isSearching ? (
                               <div className="p-3 text-sm text-warm-500 text-center">Searching...</div>
                             ) : (
@@ -268,8 +268,8 @@ export default function AdminNewOrder() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-12 gap-3">
-                  <div className="col-span-5">
+                <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
+                  <div className="col-span-2 sm:col-span-5">
                     <Input
                       label="Product Name"
                       placeholder="e.g. Daisy Candle"
@@ -278,7 +278,7 @@ export default function AdminNewOrder() {
                       required
                     />
                   </div>
-                  <div className="col-span-3">
+                  <div className="col-span-2 sm:col-span-3">
                     <Input
                       label="Variant (optional)"
                       placeholder="e.g. 100ml, Red"
@@ -286,7 +286,7 @@ export default function AdminNewOrder() {
                       onChange={e => updateItem(item.key, { variantName: e.target.value })}
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <Input
                       label="Qty"
                       type="number"
@@ -297,7 +297,7 @@ export default function AdminNewOrder() {
                       required
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div className="col-span-1 sm:col-span-2">
                     <Input
                       label="Price (₹)"
                       type="number"
@@ -315,8 +315,8 @@ export default function AdminNewOrder() {
           </div>
 
           <div className="mt-4 border-t border-warm-100 pt-4">
-            <div className="flex items-end justify-between gap-4">
-              <div className="w-48">
+            <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4">
+              <div className="w-full sm:w-48">
                 <Input
                   label="Shipping Cost (₹)"
                   type="number"
@@ -341,7 +341,7 @@ export default function AdminNewOrder() {
         {/* Order Details */}
         <div className="bg-white rounded-xl p-6 shadow-soft">
           <h2 className="font-semibold text-warm-900 mb-4">Order Details</h2>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Select
               label="Order Status"
               value={status}
@@ -390,7 +390,7 @@ export default function AdminNewOrder() {
                 </>
               )
             })()}
-            <div className="col-span-2">
+            <div className="sm:col-span-2">
               <label className="block text-sm font-medium text-warm-700 mb-1">
                 Notes <span className="text-warm-400 font-normal">(optional)</span>
               </label>

@@ -1,4 +1,21 @@
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: wix-and-wax-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass123
+      MYSQL_DATABASE: wix_and_wax
+      MYSQL_USER: waxadmin
+      MYSQL_PASSWORD: aszlAN2yntjjdMbuE7yo
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: >
+      --innodb-buffer-pool-size=128M
+      --max-connections=50
+      --performance-schema=OFF
+    mem_limit: 512m
+
   backend:
     image: wix-and-wax-backend:latest
     container_name: wix-and-wax-backend
@@ -9,9 +26,14 @@ services:
       - server/.env.production
     volumes:
       - ./uploads:/app/uploads
+    depends_on:
+      - mysql
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3001/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
+
+volumes:
+  mysql_data:

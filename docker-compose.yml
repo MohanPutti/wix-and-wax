@@ -25,7 +25,7 @@ services:
     env_file:
       - server/.env.production
     volumes:
-      - ./uploads:/app/uploads
+      - /app/wix-and-wax/uploads:/app/uploads
     depends_on:
       - mysql
     healthcheck:

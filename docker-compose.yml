@@ -35,5 +35,26 @@ services:
       retries: 3
       start_period: 30s
 
+  mcp:
+    build:
+      context: ./mcp-server
+      dockerfile: Dockerfile
+    image: wix-and-wax-mcp:latest
+    container_name: wix-and-wax-mcp
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    env_file:
+      - mcp-server/.env.production
+    depends_on:
+      - mysql
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3100/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 volumes:
   mysql_data:

@@ -16,9 +16,12 @@ const pool = mysql.createPool({
 });
 
 pool.on("connection", (conn) => {
-  conn.query(`SET SESSION MAX_EXECUTION_TIME=${STATEMENT_TIMEOUT_MS}`).catch(() => {
-    // ignore — best-effort; falls back to app-level checks
-  });
+  // The 'connection' event delivers a raw mysql2 Connection (not the promise wrapper),
+  // so use the callback form here.
+  (conn as unknown as { query: (sql: string, cb: (err: unknown) => void) => void }).query(
+    `SET SESSION MAX_EXECUTION_TIME=${STATEMENT_TIMEOUT_MS}`,
+    () => {}
+  );
 });
 
 export async function closePool() {

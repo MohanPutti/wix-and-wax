@@ -7,6 +7,7 @@ import { isInitializeRequest } from "@modelcontextprotocol/sdk/types.js";
 import { requireBearerToken } from "./auth.js";
 import { closePool } from "./db.js";
 import { registerTools } from "./tools.js";
+import { clearIdentity, setIdentity } from "./identities.js";
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -27,14 +28,20 @@ app.post("/mcp", requireBearerToken, async (req: Request, res: Response) => {
       return;
     }
 
+    const tokenPrefix = req.mcpTokenPrefix ?? "unknown";
     transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
         transports.set(id, transport!);
+        setIdentity(id, { tokenPrefix });
       },
     });
     transport.onclose = () => {
-      if (transport?.sessionId) transports.delete(transport.sessionId);
+      const sid = transport?.sessionId;
+      if (sid) {
+        transports.delete(sid);
+        clearIdentity(sid);
+      }
     };
 
     const server = new McpServer({ name: "wix-and-wax-mcp", version: "0.1.0" });

@@ -12,14 +12,23 @@ A remote MCP server exposing **read-only** SQL access to the Wicks and Wax produ
 | `run_sql`        | Run a single `SELECT` (or `WITH … SELECT`) query. Auto-caps to 1000 rows. |
 | `list_tables`    | List all tables with approximate row counts.                        |
 | `describe_table` | Show columns, types, keys, defaults for a given table.              |
+| `write_sql`      | Run a single `INSERT` / `UPDATE` / `DELETE` against allowlisted tables. |
+
+### Writable tables
+
+- **INSERT / UPDATE:** `orders`, `order_items`, `order_events`, `fulfillments`, `fulfillment_items`, `inventory_categories`, `inventory_types`, `inventory_entries`, `expense_types`, `expenses`.
+- **DELETE (subset):** `inventory_categories`, `inventory_types`, `inventory_entries`, `expense_types`, `expenses`. Orders/fulfillments are **not deletable** — cancel via status update instead.
 
 ### Safety rails
 
-1. **DB-level:** connects as `mcp_readonly` with only `SELECT` grants on `wix_and_wax.*`.
-2. **App-level:** rejects multi-statement queries, `INSERT`/`UPDATE`/`DELETE`/DDL keywords, `INTO OUTFILE`, etc.
-3. **Query timeout:** 5 s (`MAX_EXECUTION_TIME`).
-4. **Row cap:** 1000 rows if the query has no `LIMIT`.
-5. **Transport:** TLS-only via nginx; bearer token per admin.
+1. **DB-level:** connects as `mcp_rw` — `SELECT` on the whole DB, `INSERT`/`UPDATE` on the allowlist, `DELETE` on the subset only. No `DROP`/`ALTER`/`TRUNCATE`/`GRANT` at the DB layer.
+2. **App-level:**
+   - `run_sql` rejects anything that isn't `SELECT` / `WITH … SELECT`.
+   - `write_sql` rejects non-allowlisted tables, multi-statements, DDL keywords, and requires `WHERE` on `UPDATE` / `DELETE`.
+3. **Audit log:** every successful or failed write is recorded in `mcp_audit_log` (`session_id`, `token_prefix`, `operation`, `target_table`, `sql_text`, `rows_affected`, `error`). Query it via `run_sql`.
+4. **Query timeout:** 5 s (`MAX_EXECUTION_TIME`).
+5. **Row cap:** 1000 rows if a `SELECT` has no `LIMIT`.
+6. **Transport:** TLS-only via nginx; bearer token per admin; Claude Desktop & Claude Code both prompt for confirmation on tool calls by default.
 
 ---
 

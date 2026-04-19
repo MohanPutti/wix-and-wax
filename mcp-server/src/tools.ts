@@ -1,6 +1,8 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { runQuery, listTables, describeTable } from "./db.js";
+import { runQuery, listTables, describeTable, runWrite } from "./db.js";
+import { WRITE_TABLES, DELETE_TABLES } from "./writable-tables.js";
+import { getIdentity } from "./identities.js";
 
 const SCHEMA_HINT = `
 Wicks and Wax database (MySQL 8). All tables use snake_case.
@@ -93,6 +95,46 @@ export function registerTools(server: McpServer) {
     async ({ table }) => {
       const cols = await describeTable(table);
       return { content: [{ type: "text", text: JSON.stringify(cols, null, 2) }] };
+    }
+  );
+
+  server.registerTool(
+    "write_sql",
+    {
+      title: "Run a write (INSERT / UPDATE / DELETE)",
+      description:
+        "Execute a single INSERT, UPDATE, or DELETE against the allowlisted tables. " +
+        "UPDATE and DELETE require a WHERE clause. Multi-statement queries are rejected. " +
+        "Every write is logged to mcp_audit_log with the session id and a token prefix. " +
+        "Use run_sql (SELECT) to confirm the rows you plan to affect before writing.\n\n" +
+        `Writable tables (INSERT / UPDATE): ${[...WRITE_TABLES].join(", ")}.\n` +
+        `Deletable subset (DELETE): ${[...DELETE_TABLES].join(", ")}.\n` +
+        "DDL (DROP, ALTER, TRUNCATE, etc.) is rejected at both the app and DB layers.",
+      inputSchema: {
+        sql: z
+          .string()
+          .min(1)
+          .describe("A single INSERT, UPDATE, or DELETE statement. UPDATE / DELETE must have WHERE."),
+      },
+    },
+    async ({ sql }, extra) => {
+      const sessionId = extra?.sessionId;
+      const identity = getIdentity(sessionId);
+      const result = await runWrite(sql, {
+        sessionId,
+        tokenPrefix: identity?.tokenPrefix,
+      });
+      return {
+        content: [
+          {
+            type: "text",
+            text:
+              `${result.op} on \`${result.table}\` — rows affected: ${result.rowsAffected}` +
+              (result.insertId ? `, insertId: ${result.insertId}` : "") +
+              `\n\n${result.sql}`,
+          },
+        ],
+      };
     }
   );
 }

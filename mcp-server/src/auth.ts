@@ -1,5 +1,11 @@
 import type { Request, Response, NextFunction } from "express";
 
+declare module "express-serve-static-core" {
+  interface Request {
+    mcpTokenPrefix?: string;
+  }
+}
+
 const tokens = (process.env.MCP_TOKENS ?? "")
   .split(",")
   .map((t) => t.trim())
@@ -20,5 +26,6 @@ export function requireBearerToken(req: Request, res: Response, next: NextFuncti
     res.status(401).json({ error: "Invalid token" });
     return;
   }
+  req.mcpTokenPrefix = token.slice(0, 8);
   next();
 }

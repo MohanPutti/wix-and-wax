@@ -1,4 +1,4 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { ENABLE_GST } from '../config'
 import { useAppDispatch, useAppSelector } from '../store/hooks'
 import {
@@ -12,8 +12,10 @@ import Button from '../components/ui/Button'
 import Input from '../components/ui/Input'
 import { useState, useMemo, useEffect } from 'react'
 
+// Order placement is disabled for now — checkout redirects to WhatsApp instead.
+const WHATSAPP_URL = 'https://wa.me/916361019528'
+
 export default function Cart() {
-  const navigate = useNavigate()
   const dispatch = useAppDispatch()
   const cart = useAppSelector(selectCart)
   const itemCount = useAppSelector(selectItemCount)
@@ -124,15 +126,7 @@ export default function Cart() {
     if (selectedCount === 0) {
       return
     }
-    // Pass selected items to checkout page
-    const selectedItemsData = cart?.items
-      .filter(item => selectedItems.has(item.id))
-      .map(item => ({
-        id: item.id,
-        variantId: item.variantId,
-        quantity: item.quantity
-      }))
-    navigate('/checkout', { state: { selectedItems: selectedItemsData, orderNotes: orderNotes.trim() || undefined } })
+    window.open(WHATSAPP_URL, '_blank', 'noopener,noreferrer')
   }
 
   return (

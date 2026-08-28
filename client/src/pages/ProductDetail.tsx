@@ -10,6 +10,12 @@ import type { ProductVariant, ProductMetadata } from '../types'
 
 const SEARCH_THRESHOLD = 2
 
+// Simplified product page for now: only name/price/tagline/quantity/Add to Cart are shown.
+// Flip these back to true to restore the variant pickers, note field, and details list.
+const SHOW_VARIANT_OPTIONS = false
+const SHOW_PRODUCT_NOTE = false
+const SHOW_PRODUCT_DETAILS = false
+
 export default function ProductDetail() {
   const { slug } = useParams<{ slug: string }>()
   const { product, isLoading, error } = useProduct(slug || '', true)
@@ -56,7 +62,7 @@ export default function ProductDetail() {
     const initPackagingMode = metaRaw?.packagingMode || 'none'
     const isPackagingOnlyProduct = product.variants.length > 0 &&
       product.variants.every((v) => v.options?.packaging && !v.options?.base)
-    if (!isPackagingOnlyProduct && initPackagingMode === 'single' && initPackaging.length > 0) {
+    if (SHOW_VARIANT_OPTIONS && !isPackagingOnlyProduct && initPackagingMode === 'single' && initPackaging.length > 0) {
       const cheapest = initPackaging.reduce((min, p) =>
         (Number(initPackagingPrices[p]) || 0) < (Number(initPackagingPrices[min]) || 0) ? p : min
       , initPackaging[0])
@@ -192,20 +198,20 @@ export default function ProductDetail() {
   const handleAddToCart = async () => {
     if (!currentVariant) return
 
-    // Validate required selections
-    if (hasMultipleBases && baseMode !== 'none' && !selectedBaseName) {
+    // Validate required selections (only enforced while the variant pickers are shown)
+    if (SHOW_VARIANT_OPTIONS && hasMultipleBases && baseMode !== 'none' && !selectedBaseName) {
       setSelectionError('Please select a base before adding to cart.')
       return
     }
-    if (colorMode === 'single' && colors.length > 0 && !selectedColor) {
+    if (SHOW_VARIANT_OPTIONS && colorMode === 'single' && colors.length > 0 && !selectedColor) {
       setSelectionError('Please select a color before adding to cart.')
       return
     }
-    if (fragranceMode === 'single' && fragrances.length > 0 && selectedFragranceList.length === 0) {
+    if (SHOW_VARIANT_OPTIONS && fragranceMode === 'single' && fragrances.length > 0 && selectedFragranceList.length === 0) {
       setSelectionError('Please select a fragrance before adding to cart.')
       return
     }
-    if (packagingMode === 'single' && packaging.length > 0 && selectedPackagingList.length === 0) {
+    if (SHOW_VARIANT_OPTIONS && packagingMode === 'single' && packaging.length > 0 && selectedPackagingList.length === 0) {
       setSelectionError('Please select a packaging option before adding to cart.')
       return
     }
@@ -393,7 +399,7 @@ export default function ProductDetail() {
           )}
 
           {/* Case 1: Base picker + Size picker */}
-          {!isPackagingOnly && (
+          {SHOW_VARIANT_OPTIONS && !isPackagingOnly && (
             <>
               {/* Base picker */}
               {hasMultipleBases && baseMode !== 'none' && (
@@ -444,7 +450,7 @@ export default function ProductDetail() {
           )}
 
           {/* Case 2: Packaging-only variant selector */}
-          {isPackagingOnly && product.variants.length > 0 && (
+          {SHOW_VARIANT_OPTIONS && isPackagingOnly && product.variants.length > 0 && (
             <div className="mb-5">
               <label className="block text-sm font-medium text-warm-700 mb-2">
                 Packaging<span className="text-red-500 ml-0.5">*</span>
@@ -469,7 +475,7 @@ export default function ProductDetail() {
           )}
 
           {/* Packaging add-on (Case 1 only) */}
-          {!isPackagingOnly && packaging.length > 0 && (
+          {SHOW_VARIANT_OPTIONS && !isPackagingOnly && packaging.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-warm-700 mb-2">
                 Packaging{packagingMode !== 'none' && <span className="text-red-500 ml-0.5">*</span>}
@@ -516,7 +522,7 @@ export default function ProductDetail() {
           )}
 
           {/* Fragrances + Colors — side by side when both exist */}
-          {(fragrances.length > 0 || colors.length > 0) && (
+          {SHOW_VARIANT_OPTIONS && (fragrances.length > 0 || colors.length > 0) && (
             <div className={`mb-6 ${fragrances.length > 0 && colors.length > 0 ? 'grid grid-cols-2 gap-4' : ''}`}>
 
               {/* Fragrances */}
@@ -736,7 +742,7 @@ export default function ProductDetail() {
           )}
 
           {/* Customisations */}
-          {enabledCustomisations.length > 0 && (
+          {SHOW_VARIANT_OPTIONS && enabledCustomisations.length > 0 && (
             <div className="mb-6">
               <p className="text-sm font-medium text-warm-700 mb-2">
                 Customisations
@@ -819,18 +825,20 @@ export default function ProductDetail() {
           )}
 
           {/* Product Note */}
-          <div className="mb-6">
-            <label className="block text-sm font-medium text-warm-700 mb-1">
-              Note <span className="text-warm-400 font-normal">(optional)</span>
-            </label>
-            <textarea
-              rows={2}
-              placeholder="Any special requests or instructions..."
-              value={productNote}
-              onChange={(e) => setProductNote(e.target.value)}
-              className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
-            />
-          </div>
+          {SHOW_PRODUCT_NOTE && (
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-warm-700 mb-1">
+                Note <span className="text-warm-400 font-normal">(optional)</span>
+              </label>
+              <textarea
+                rows={2}
+                placeholder="Any special requests or instructions..."
+                value={productNote}
+                onChange={(e) => setProductNote(e.target.value)}
+                className="w-full rounded-lg border border-warm-200 px-3 py-2 text-sm text-warm-900 placeholder-warm-400 focus:outline-none focus:ring-1 focus:ring-amber-500 resize-none"
+              />
+            </div>
+          )}
 
           {/* Quantity */}
           <div className="mb-8">
@@ -875,15 +883,17 @@ export default function ProductDetail() {
           )}
 
           {/* Product Details */}
-          <div className="mt-12 border-t border-warm-200 pt-8">
-            <h2 className="font-semibold text-warm-900 mb-4">Product Details</h2>
-            <ul className="space-y-2 text-warm-600 text-sm">
-              <li>SKU: {currentVariant.sku}</li>
-              {currentVariant.options && Object.entries(currentVariant.options).map(([key, value]) => (
-                <li key={key} className="capitalize">{key}: {value}</li>
-              ))}
-            </ul>
-          </div>
+          {SHOW_PRODUCT_DETAILS && (
+            <div className="mt-12 border-t border-warm-200 pt-8">
+              <h2 className="font-semibold text-warm-900 mb-4">Product Details</h2>
+              <ul className="space-y-2 text-warm-600 text-sm">
+                <li>SKU: {currentVariant.sku}</li>
+                {currentVariant.options && Object.entries(currentVariant.options).map(([key, value]) => (
+                  <li key={key} className="capitalize">{key}: {value}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </div>
     </div>

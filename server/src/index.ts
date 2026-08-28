@@ -132,17 +132,25 @@ app.use('/api', setupCartModule({
 // Monthly order stats for Reports page — must be before setupOrderModule
 app.get('/api/orders/monthly', requireAuth, async (_req, res) => {
   try {
-    const now = new Date()
+    // Server runs in UTC but the business operates in IST (UTC+5:30). Month
+    // boundaries must be computed in IST, otherwise orders placed in the
+    // early hours of the 1st (00:00-05:29 IST) still have a UTC timestamp
+    // from the previous day/month and get bucketed into the wrong month.
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000
+    const nowIST = new Date(Date.now() + IST_OFFSET_MS)
     const months: {
       key: string; label: string; count: number
       total: number; received: number; pending: number
     }[] = []
 
     for (let i = 11; i >= 0; i--) {
-      const start = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const end   = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
-      const key   = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`
-      const label = start.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })
+      const y = nowIST.getUTCFullYear()
+      const m = nowIST.getUTCMonth() - i
+      const start = new Date(Date.UTC(y, m, 1) - IST_OFFSET_MS)
+      const end   = new Date(Date.UTC(y, m + 1, 1) - IST_OFFSET_MS)
+      const monthDate = new Date(Date.UTC(y, m, 1))
+      const key   = `${monthDate.getUTCFullYear()}-${String(monthDate.getUTCMonth() + 1).padStart(2, '0')}`
+      const label = monthDate.toLocaleDateString('en-IN', { month: 'short', year: '2-digit', timeZone: 'UTC' })
 
       const orders = await prisma.order.findMany({
         where: { createdAt: { gte: start, lt: end }, deletedAt: null },

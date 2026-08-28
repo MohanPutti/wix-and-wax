@@ -168,13 +168,13 @@ function RevenueVsExpensesChart({
   orderData,
 }: {
   expenses: Expense[]
-  orderData: { key: string; label: string; received: number }[]
+  orderData: { key: string; label: string; total: number }[]
 }) {
-  const chartData = orderData.map(({ key, label, received }) => {
+  const chartData = orderData.map(({ key, label, total }) => {
     const totalExpenses = expenses
       .filter((e) => getMonthKey(e.date) === key)
       .reduce((s, e) => s + Number(e.amount), 0)
-    return { month: label, Revenue: received, Expenses: totalExpenses, Profit: received - totalExpenses }
+    return { month: label, Revenue: total, Expenses: totalExpenses, Profit: total - totalExpenses }
   })
 
   const hasData = chartData.some((r) => r.Revenue > 0 || r.Expenses > 0)

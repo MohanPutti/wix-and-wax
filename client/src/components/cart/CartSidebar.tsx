@@ -14,6 +14,9 @@ import {
 } from '../../store/slices/cartSlice'
 import Button from '../ui/Button'
 
+// Order placement is disabled for now — checkout redirects to WhatsApp instead.
+const WHATSAPP_URL = 'https://wa.me/916361019528'
+
 export default function CartSidebar() {
   const dispatch = useAppDispatch()
   const cart = useAppSelector(selectCart)
@@ -169,11 +172,11 @@ export default function CartSidebar() {
                             View Full Cart
                           </Button>
                         </Link>
-                        <Link to="/checkout" onClick={handleClose}>
+                        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" onClick={handleClose}>
                           <Button className="w-full" size="lg">
                             Checkout
                           </Button>
-                        </Link>
+                        </a>
                         <button
                           onClick={handleClose}
                           className="w-full mt-3 text-center text-amber-600 hover:text-amber-700 transition-colors"
